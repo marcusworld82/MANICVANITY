@@ -7,17 +7,19 @@ import { CartProvider } from './context/CartContext';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import CartDrawer from './components/Cart/CartDrawer';
-import Home from './pages/Home';
-import Shop from './pages/Shop';
-import ProductDetail from './pages/ProductDetail';
 import SignInForm from './components/Auth/SignInForm';
 import SignUpForm from './components/Auth/SignUpForm';
-import Checkout from './pages/Checkout';
+
+// Lazy load page components for code splitting
+const Home = React.lazy(() => import('./pages/Home'));
+const Shop = React.lazy(() => import('./pages/Shop'));
+const ProductDetail = React.lazy(() => import('./pages/ProductDetail'));
+const Checkout = React.lazy(() => import('./pages/Checkout'));
 import CheckoutSuccess from './pages/CheckoutSuccess';
 import CheckoutCancel from './pages/CheckoutCancel';
-import Account from './pages/Account';
-import CommandCenter from './pages/CommandCenter';
-import AdminPanel from './pages/AdminPanel';
+const Account = React.lazy(() => import('./pages/Account'));
+const CommandCenter = React.lazy(() => import('./pages/CommandCenter'));
+const AdminPanel = React.lazy(() => import('./pages/AdminPanel'));
 
 function App() {
   return (
@@ -33,18 +35,20 @@ function App() {
                 
                 {/* Main App Routes */}
                 <Route path="/" element={<Layout />}>
-                  <Route index element={<Home />} />
-                  <Route path="shop" element={<Shop />} />
-                  <Route path="p/:slug" element={<ProductDetail />} />
+                  <Route index element={<React.Suspense fallback={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-electric"></div></div>}><Home /></React.Suspense>} />
+                  <Route path="shop" element={<React.Suspense fallback={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-electric"></div></div>}><Shop /></React.Suspense>} />
+                  <Route path="p/:slug" element={<React.Suspense fallback={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-electric"></div></div>}><ProductDetail /></React.Suspense>} />
                   <Route path="collections" element={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><p className="text-dark-text text-2xl">Collections Page Coming Soon</p></div>} />
-                  <Route path="command-center" element={<CommandCenter />} />
+                  <Route path="command-center" element={<React.Suspense fallback={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-electric"></div></div>}><CommandCenter /></React.Suspense>} />
                   <Route path="about" element={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><p className="text-dark-text text-2xl">About Page Coming Soon</p></div>} />
                   <Route path="contact" element={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><p className="text-dark-text text-2xl">Contact Page Coming Soon</p></div>} />
                   
                   {/* Protected Routes */}
                   <Route path="checkout" element={
                     <ProtectedRoute>
-                      <Checkout />
+                      <React.Suspense fallback={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-electric"></div></div>}>
+                        <Checkout />
+                      </React.Suspense>
                     </ProtectedRoute>
                   } />
                   
@@ -54,7 +58,7 @@ function App() {
                   <Route path="account/*" element={
                     <ProtectedRoute>
                       <Routes>
-                        <Route index element={<Account />} />
+                        <Route index element={<React.Suspense fallback={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-electric"></div></div>}><Account /></React.Suspense>} />
                         <Route path="orders" element={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><p className="text-dark-text text-2xl">Orders Page Coming Soon</p></div>} />
                         <Route path="addresses" element={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><p className="text-dark-text text-2xl">Addresses Page Coming Soon</p></div>} />
                         <Route path="wishlist" element={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><p className="text-dark-text text-2xl">Wishlist Page Coming Soon</p></div>} />
@@ -64,7 +68,7 @@ function App() {
                   } />
                   
                   {/* Admin Panel */}
-                  <Route path="admin" element={<AdminPanel />} />
+                  <Route path="admin" element={<React.Suspense fallback={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-electric"></div></div>}><AdminPanel /></React.Suspense>} />
                 </Route>
               </Routes>
               
