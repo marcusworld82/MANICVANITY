@@ -18,6 +18,7 @@ import CheckoutCancel from './pages/CheckoutCancel';
 import Account from './pages/Account';
 import CommandCenter from './pages/CommandCenter';
 import AdminPanel from './pages/AdminPanel';
+import TestProducts from './pages/TestProducts';
 
 function App() {
   return (
@@ -65,6 +66,9 @@ function App() {
                   
                   {/* Admin Panel */}
                   <Route path="admin" element={<AdminPanel />} />
+                  
+                  {/* Test Products Page */}
+                  <Route path="test-products" element={<TestProducts />} />
                 </Route>
               </Routes>
               
