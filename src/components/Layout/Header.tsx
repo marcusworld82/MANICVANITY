@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, ShoppingBag, Menu, X, ChevronDown } from 'lucide-react';
+import { Search, ShoppingBag, Menu, X, ChevronDown, Filter } from 'lucide-react';
 import AccountDropdown from '../Auth/AccountDropdown';
 import { useCart } from '../../context/CartContext';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const { itemCount, openCart } = useCart();
 
   const navItems = [
@@ -104,10 +105,10 @@ const Header: React.FC = () => {
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
+              onClick={() => setShowSearchModal(true)}
               className="text-dark-muted hover:text-electric-400 transition-colors duration-200 relative"
             >
               <Search size={20} />
-              {/* Search functionality can be added here */}
             </motion.button>
             
             <AccountDropdown />
