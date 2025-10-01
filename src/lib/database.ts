@@ -1,136 +1,156 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+export type Product = {
+  id: string | number
+  title: string
+  slug: string
+  description?: string
+  price: number
+  compare_at_price?: number | null
+  currency?: string
+  sku?: string
+  barcode?: string
+  inventory_qty?: number
+  status?: 'active' | 'draft'
+  category?: string
+  tags?: string
+  option1_name?: string
+  option1_value?: string
+  option2_name?: string
+  option2_value?: string
+  image1_url?: string
+  image2_url?: string
+  image3_url?: string
+}
 
-// Initialize SQLite database
-const dbPath = path.join(process.cwd(), 'manicvanity.db');
-export const db = new Database(dbPath);
+const STORAGE_KEY = 'products_dev'
 
-// Enable foreign keys
-db.pragma('foreign_keys = ON');
+export async function initializeDatabase(): Promise<void> {
+  if (typeof window === 'undefined') return
+  const raw = localStorage.getItem(STORAGE_KEY)
+  if (!raw) localStorage.setItem(STORAGE_KEY, JSON.stringify([]))
+}
 
-// Database schema
-export const initializeDatabase = () => {
-  // Categories table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS categories (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      slug TEXT UNIQUE NOT NULL,
-      description TEXT,
-      image_url TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+export async function getAllProducts(): Promise<Product[]> {
+  if (typeof window === 'undefined') return []
+  const raw = localStorage.getItem(STORAGE_KEY)
+  try {
+    return raw ? (JSON.parse(raw) as Product[]) : []
+  } catch {
+    return []
+  }
+}
 
-  // Products table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS products (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      category TEXT NOT NULL,
-      description TEXT,
-      base_price REAL NOT NULL,
-      material TEXT,
-      care_instructions TEXT,
-      is_active BOOLEAN DEFAULT 1,
-      slug TEXT UNIQUE NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (category) REFERENCES categories(slug)
-    )
-  `);
+export async function setAllProducts(items: Product[]): Promise<void> {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+}
 
-  // Product images table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS product_images (
-      id TEXT PRIMARY KEY,
-      product_id TEXT NOT NULL,
-      image_url TEXT NOT NULL,
-      position INTEGER DEFAULT 0,
-      is_primary BOOLEAN DEFAULT 0,
-      alt TEXT,
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-    )
-  `);
+/**
+ * importProductsFromCSV
+ * Parses a CSV string with headers and writes normalized products into storage.
+ * Required headers: title, slug, price, image1_url
+ * Optional headers match Product fields.
+ */
+export async function importProductsFromCSV(csvText: string): Promise<{ imported: number; errors: number; samples: Product[] }> {
+  const rows = parseCSV(csvText)
+  const products: Product[] = []
+  let errors = 0
 
-  // Variants table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS variants (
-      id TEXT PRIMARY KEY,
-      product_id TEXT NOT NULL,
-      size TEXT NOT NULL,
-      color TEXT NOT NULL,
-      stock_quantity INTEGER DEFAULT 0,
-      sku TEXT UNIQUE NOT NULL,
-      price_modifier REAL DEFAULT 0,
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-    )
-  `);
+  for (const r of rows) {
+    try {
+      const title = val(r.product_name || r.title)
+      const slug = slugify(val(r.slug) || title)
+      const price = toNumber(val(r.base_price || r.price))
+      const image1_url = val(r.image_url || r.image1_url) || `https://picsum.photos/800/1000?random=${Math.floor(Math.random() * 1000)}`
 
-  // Orders table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS orders (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      total REAL NOT NULL,
-      status TEXT DEFAULT 'pending',
-      shipping_address TEXT,
-      billing_address TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+      if (!title || !slug || Number.isNaN(price)) throw new Error('Missing required fields')
 
-  // Order items table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS order_items (
-      id TEXT PRIMARY KEY,
-      order_id TEXT NOT NULL,
-      product_id TEXT NOT NULL,
-      variant_id TEXT,
-      quantity INTEGER NOT NULL,
-      price_at_purchase REAL NOT NULL,
-      FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-      FOREIGN KEY (product_id) REFERENCES products(id),
-      FOREIGN KEY (variant_id) REFERENCES variants(id)
-    )
-  `);
+      const p: Product = {
+        id: val(r.id) || slug,
+        title,
+        slug,
+        description: val(r.description),
+        price: round2(price),
+        compare_at_price: toNumberOrNull(val(r.compare_at_price)),
+        currency: val(r.currency) || 'USD',
+        sku: val(r.sku),
+        barcode: val(r.barcode),
+        inventory_qty: toInt(val(r.stock_quantity || r.inventory_qty), 10),
+        status: (val(r.status) as any) || 'active',
+        category: val(r.category),
+        tags: val(r.tags),
+        option1_name: val(r.size) ? 'Size' : val(r.option1_name),
+        option1_value: val(r.size) || val(r.option1_value),
+        option2_name: val(r.color) ? 'Color' : val(r.option2_name),
+        option2_value: val(r.color) || val(r.option2_value),
+        image1_url,
+        image2_url: val(r.image2_url) || `https://picsum.photos/800/1000?random=${Math.floor(Math.random() * 1000) + 1000}`,
+        image3_url: val(r.image3_url) || `https://picsum.photos/800/1000?random=${Math.floor(Math.random() * 1000) + 2000}`,
+      }
+      products.push(p)
+    } catch {
+      errors += 1
+    }
+  }
 
-  // Cart items table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS cart_items (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      product_id TEXT NOT NULL,
-      variant_id TEXT,
-      quantity INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-      FOREIGN KEY (variant_id) REFERENCES variants(id) ON DELETE CASCADE
-    )
-  `);
+  const existing = await getAllProducts()
+  const merged = mergeBySlug(existing, products)
+  await setAllProducts(merged)
 
-  // Users table for authentication
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+  return { imported: products.length, errors, samples: merged.slice(0, 3) }
+}
 
-  console.log('Database initialized successfully');
-};
+/* Helpers */
+function val(x: unknown): string {
+  return typeof x === 'string' ? x.trim() : x == null ? '' : String(x).trim()
+}
+function toNumber(x: string): number { return Number.parseFloat(x) }
+function toNumberOrNull(x: string): number | null {
+  const n = Number.parseFloat(x)
+  return Number.isNaN(n) ? null : n
+}
+function toInt(x: string, d = 0): number {
+  const n = Number.parseInt(x, 10)
+  return Number.isNaN(n) ? d : n
+}
+function round2(n: number): number { return Math.round(n * 100) / 100 }
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+function mergeBySlug(a: Product[], b: Product[]): Product[] {
+  const map = new Map<string, Product>()
+  for (const p of a) map.set(p.slug, p)
+  for (const p of b) map.set(p.slug, p)
+  return Array.from(map.values())
+}
 
-// Helper functions
-export const generateId = () => {
-  return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
-};
-
-export const createSlug = (name: string) => {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .trim();
-};
+/* Very small CSV parser: supports quoted fields and commas */
+function parseCSV(text: string): Record<string, string>[] {
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length)
+  if (lines.length === 0) return []
+  const headers = splitCSVLine(lines[0]).map(h => h.trim().toLowerCase())
+  const out: Record<string, string>[] = []
+  for (let i = 1; i < lines.length; i++) {
+    const cols = splitCSVLine(lines[i])
+    const row: Record<string, string> = {}
+    for (let j = 0; j < headers.length; j++) row[headers[j]] = cols[j] ?? ''
+    out.push(row)
+  }
+  return out
+}
+function splitCSVLine(line: string): string[] {
+  const res: string[] = []
+  let cur = ''
+  let q = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"' ) {
+      if (q && line[i+1] === '"') { cur += '"'; i++ } else { q = !q }
+    } else if (ch === ',' && !q) {
+      res.push(cur); cur = ''
+    } else {
+      cur += ch
+    }
+  }
+  res.push(cur)
+  return res
+}
