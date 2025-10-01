@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ShoppingBag, Filter, X, ChevronDown, Eye, Heart, Grid, List } from 'lucide-react';
+import { ShoppingBag, Filter, X, ChevronDown, Eye, Heart, Grid2x2 as Grid, List } from 'lucide-react';
 import { listProducts, listCategories, formatPrice } from '../data/catalog';
 import { useCart } from '../context/CartContext';
 import type { Product, Category } from '../types/database';
