@@ -1,9 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Elements } from '@stripe/react-stripe-js';
-import { stripePromise } from './lib/stripe';
-import { AuthProvider } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
+import { LocalAuthProvider } from './context/LocalAuthContext';
+import { LocalCartProvider } from './context/LocalCartContext';
+import { initializeDatabase, importProductsFromCSV } from './lib/database';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import CartDrawer from './components/Cart/CartDrawer';
@@ -21,11 +20,26 @@ import AdminPanel from './pages/AdminPanel';
 import TestProducts from './pages/TestProducts';
 
 function App() {
+  // Initialize database on app start
+  React.useEffect(() => {
+    try {
+      initializeDatabase();
+      // Import products if database is empty
+      const { getProducts } = require('./data/localCatalog');
+      const existingProducts = getProducts({ limit: 1 });
+      if (existingProducts.length === 0) {
+        console.log('Importing products...');
+        importProductsFromCSV();
+      }
+    } catch (error) {
+      console.error('Database initialization error:', error);
+    }
+  }, []);
+
   return (
     <div className="dark">
-      <Elements stripe={stripePromise}>
-        <AuthProvider>
-          <CartProvider>
+        <LocalAuthProvider>
+          <LocalCartProvider>
             <Router>
               <Routes>
                 {/* Auth Routes */}
@@ -75,9 +89,8 @@ function App() {
               {/* Global Components */}
               <CartDrawer />
             </Router>
-          </CartProvider>
-        </AuthProvider>
-      </Elements>
+          </LocalCartProvider>
+        </LocalAuthProvider>
     </div>
   );
 }
