@@ -4,7 +4,6 @@ import { ArrowLeft, ArrowRight, Check, CreditCard, Lock, MapPin, Package, User }
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/LocalCartContext';
 import { useLocalAuth } from '../context/LocalAuthContext';
-import { createOrder, ShippingAddress } from '../lib/database';
 
 type CheckoutStep = 'shipping' | 'billing' | 'review' | 'payment';
 

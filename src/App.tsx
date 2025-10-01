@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Elements } from '@stripe/react-stripe-js';
 import { stripePromise } from './lib/stripe';
-import { LocalAuthProvider } from './context/LocalAuthContext';
-import { LocalCartProvider } from './context/LocalCartContext';
+import { AuthProvider } from './context/LocalAuthContext';
+import { CartProvider } from './context/LocalCartContext';
+import { initializeDatabase, importProductsFromCSV } from './lib/database';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import CartDrawer from './components/Cart/CartDrawer';
@@ -22,11 +23,44 @@ import AdminPanel from './pages/AdminPanel';
 import TestProducts from './pages/TestProducts';
 
 function App() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let canceled = false;
+    const run = async () => {
+      try {
+        await initializeDatabase();
+      } catch (error) {
+        console.error('Database initialization error:', error);
+      } finally {
+        if (!canceled) setReady(true);
+      }
+    };
+    run();
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  const onCSVSelected = async (file: File) => {
+    const text = await file.text();
+    const res = await importProductsFromCSV(text);
+    console.log('Imported', res.imported, 'errors', res.errors);
+  };
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-electric-400"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="dark">
       <Elements stripe={stripePromise}>
-        <LocalAuthProvider>
-          <LocalCartProvider>
+        <AuthProvider>
+          <CartProvider>
             <Router>
               <Routes>
                 {/* Auth Routes */}
@@ -77,8 +111,8 @@ function App() {
               {/* Global Components */}
               <CartDrawer />
             </Router>
-          </LocalCartProvider>
-        </LocalAuthProvider>
+          </CartProvider>
+        </AuthProvider>
       </Elements>
     </div>
   );

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useLocalAuth } from '../LocalAuthContext';
 
 const SignInForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -11,7 +11,7 @@ const SignInForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  const { signIn } = useAuth();
+  const { login } = useLocalAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,10 +19,10 @@ const SignInForm: React.FC = () => {
     setLoading(true);
     setError('');
 
-    const { error } = await signIn(email, password);
+    const success = await login(email, password);
     
-    if (error) {
-      setError(error.message);
+    if (!success) {
+      setError('Invalid email or password');
     } else {
       navigate('/');
     }

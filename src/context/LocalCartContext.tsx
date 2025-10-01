@@ -1,111 +1,122 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { CartItem, getCartItems, saveCartItems, addToCart as dbAddToCart, updateCartItemQuantity, removeFromCart, clearCart } from '../lib/database';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocalAuth } from './LocalAuthContext';
-import type { Product } from '../lib/database';
+
+interface CartItem {
+  id: string;
+  productId: string;
+  title: string;
+  price: number;
+  image: string;
+  size?: string;
+  color?: string;
+  quantity: number;
+}
 
 interface CartContextType {
   items: CartItem[];
   itemCount: number;
   subtotal: number;
   isOpen: boolean;
-  loading: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addToCart: (product: Product, options?: { size?: string; color?: string; quantity?: number }) => Promise<void>;
-  updateQuantity: (itemId: string, quantity: number) => Promise<void>;
-  removeItem: (itemId: string) => Promise<void>;
-  clearAllItems: () => Promise<void>;
+  addToCart: (product: any, options?: { size?: string; color?: string; quantity?: number }) => void;
+  updateQuantity: (itemId: string, quantity: number) => void;
+  removeItem: (itemId: string) => void;
+  clearAllItems: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
-  return context;
-};
-
-export const LocalCartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user } = useLocalAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  // Load cart items when user changes
+  const getStorageKey = () => user ? `cart_${user.id}` : 'cart_guest';
+
   useEffect(() => {
-    loadCartItems();
-  }, [user?.id]);
+    const key = getStorageKey();
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      try {
+        setItems(JSON.parse(stored));
+      } catch {
+        setItems([]);
+      }
+    }
+  }, [user]);
 
-  const loadCartItems = async () => {
-    setLoading(true);
-    try {
-      const cartItems = await getCartItems(user?.id);
-      setItems(cartItems);
-    } catch (error) {
-      console.error('Error loading cart items:', error);
-    } finally {
-      setLoading(false);
+  const saveCart = (newItems: CartItem[]) => {
+    const key = getStorageKey();
+    localStorage.setItem(key, JSON.stringify(newItems));
+    setItems(newItems);
+  };
+
+  const addToCart = (product: any, options: { size?: string; color?: string; quantity?: number } = {}) => {
+    const newItem: CartItem = {
+      id: `${product.id}_${options.size || ''}_${options.color || ''}`,
+      productId: product.id,
+      title: product.title,
+      price: product.price,
+      image: product.image1_url || '',
+      size: options.size,
+      color: options.color,
+      quantity: options.quantity || 1
+    };
+
+    const existing = items.find(item => item.id === newItem.id);
+    if (existing) {
+      updateQuantity(existing.id, existing.quantity + newItem.quantity);
+    } else {
+      saveCart([...items, newItem]);
     }
   };
 
-  const addToCart = async (product: Product, options: { size?: string; color?: string; quantity?: number } = {}) => {
-    try {
-      await dbAddToCart(product, options, user?.id);
-      await loadCartItems();
-    } catch (error) {
-      console.error('Error adding to cart:', error);
+  const updateQuantity = (itemId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeItem(itemId);
+      return;
     }
+    const newItems = items.map(item =>
+      item.id === itemId ? { ...item, quantity } : item
+    );
+    saveCart(newItems);
   };
 
-  const updateQuantity = async (itemId: string, quantity: number) => {
-    try {
-      await updateCartItemQuantity(itemId, quantity, user?.id);
-      await loadCartItems();
-    } catch (error) {
-      console.error('Error updating quantity:', error);
-    }
+  const removeItem = (itemId: string) => {
+    const newItems = items.filter(item => item.id !== itemId);
+    saveCart(newItems);
   };
 
-  const removeItem = async (itemId: string) => {
-    try {
-      await removeFromCart(itemId, user?.id);
-      await loadCartItems();
-    } catch (error) {
-      console.error('Error removing item:', error);
-    }
+  const clearAllItems = () => {
+    saveCart([]);
   };
 
-  const clearAllItems = async () => {
-    try {
-      await clearCart(user?.id);
-      await loadCartItems();
-    } catch (error) {
-      console.error('Error clearing cart:', error);
-    }
-  };
-
-  const openCart = () => setIsOpen(true);
-  const closeCart = () => setIsOpen(false);
-
-  // Calculate totals
   const itemCount = items.reduce((total, item) => total + item.quantity, 0);
   const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
 
-  const value = {
-    items,
-    itemCount,
-    subtotal,
-    isOpen,
-    loading,
-    openCart,
-    closeCart,
-    addToCart,
-    updateQuantity,
-    removeItem,
-    clearAllItems,
-  };
+  return (
+    <CartContext.Provider value={{
+      items,
+      itemCount,
+      subtotal,
+      isOpen,
+      openCart: () => setIsOpen(true),
+      closeCart: () => setIsOpen(false),
+      addToCart,
+      updateQuantity,
+      removeItem,
+      clearAllItems
+    }}>
+      {children}
+    </CartContext.Provider>
+  );
+}
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
-};
+export function useCart() {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within CartProvider');
+  }
+  return context;
+}

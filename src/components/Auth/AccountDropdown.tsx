@@ -2,10 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, LogOut, Settings, Package, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useLocalAuth } from '../LocalAuthContext';
 
 const AccountDropdown: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useLocalAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -21,7 +21,7 @@ const AccountDropdown: React.FC = () => {
   }, []);
 
   const handleSignOut = async () => {
-    await signOut();
+    logout();
     setIsOpen(false);
   };
 

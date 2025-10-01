@@ -1,159 +1,148 @@
-@@ .. @@
- function mergeBySlug(a: Product[], b: Product[]): Product[] {
-   const map = new Map<string, Product>()
-   for (const p of a) map.set(p.slug, p)
-   for (const p of b) map.set(p.slug, p)
-   return Array.from(map.values())
- }
- 
-+// Cart and Order Types
-+export interface CartItem {
-+  id: string
-+  productId: string
-+  title: string
-+  price: number
-+  image: string
-+  size?: string
-+  color?: string
-+  quantity: number
-+}
-+
-+export interface ShippingAddress {
-+  firstName: string
-+  lastName: string
-+  email: string
-+  phone: string
-+  address1: string
-+  address2?: string
-+  city: string
-+  state: string
-+  zipCode: string
-+  country: string
-+}
-+
-+export interface Order {
-+  id: string
-+  userId?: string
-+  items: CartItem[]
-+  shippingAddress: ShippingAddress
-+  billingAddress: ShippingAddress
-+  subtotal: number
-+  shipping: number
-+  tax: number
-+  total: number
-+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered'
-+  createdAt: string
-+  estimatedDelivery: string
-+}
-+
-+// Cart Management
-+const CART_KEY = 'cart_items'
-+const ORDERS_KEY = 'orders'
-+
-+export async function getCartItems(userId?: string): Promise<CartItem[]> {
-+  if (typeof window === 'undefined') return []
-+  const key = userId ? `${CART_KEY}_${userId}` : CART_KEY
-+  const raw = localStorage.getItem(key)
-+  try {
-+    return raw ? JSON.parse(raw) : []
-+  } catch {
-+    return []
-+  }
-+}
-+
-+export async function saveCartItems(items: CartItem[], userId?: string): Promise<void> {
-+  if (typeof window === 'undefined') return
-+  const key = userId ? `${CART_KEY}_${userId}` : CART_KEY
-+  localStorage.setItem(key, JSON.stringify(items))
-+}
-+
-+export async function addToCart(product: Product, options: { size?: string; color?: string; quantity?: number } = {}, userId?: string): Promise<void> {
-+  const items = await getCartItems(userId)
-+  const existingIndex = items.findIndex(item => 
-+    item.productId === product.id && 
-+    item.size === options.size && 
-+    item.color === options.color
-+  )
-+
-+  if (existingIndex >= 0) {
-+    items[existingIndex].quantity += options.quantity || 1
-+  } else {
-+    const newItem: CartItem = {
-+      id: generateId(),
-+      productId: String(product.id),
-+      title: product.title,
-+      price: product.price,
-+      image: product.image1_url || '',
-+      size: options.size,
-+      color: options.color,
-+      quantity: options.quantity || 1
-+    }
-+    items.push(newItem)
-+  }
-+
-+  await saveCartItems(items, userId)
-+}
-+
-+export async function updateCartItemQuantity(itemId: string, quantity: number, userId?: string): Promise<void> {
-+  const items = await getCartItems(userId)
-+  const index = items.findIndex(item => item.id === itemId)
-+  
-+  if (index >= 0) {
-+    if (quantity <= 0) {
-+      items.splice(index, 1)
-+    } else {
-+      items[index].quantity = quantity
-+    }
-+    await saveCartItems(items, userId)
-+  }
-+}
-+
-+export async function removeFromCart(itemId: string, userId?: string): Promise<void> {
-+  const items = await getCartItems(userId)
-+  const filtered = items.filter(item => item.id !== itemId)
-+  await saveCartItems(filtered, userId)
-+}
-+
-+export async function clearCart(userId?: string): Promise<void> {
-+  await saveCartItems([], userId)
-+}
-+
-+// Order Management
-+export async function createOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'estimatedDelivery'>): Promise<Order> {
-+  const order: Order = {
-+    ...orderData,
-+    id: generateId(),
-+    createdAt: new Date().toISOString(),
-+    estimatedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString() // 5 days from now
-+  }
-+
-+  const orders = await getOrders(orderData.userId)
-+  orders.unshift(order)
-+  await saveOrders(orders, orderData.userId)
-+
-+  return order
-+}
-+
-+export async function getOrders(userId?: string): Promise<Order[]> {
-+  if (typeof window === 'undefined') return []
-+  const key = userId ? `${ORDERS_KEY}_${userId}` : ORDERS_KEY
-+  const raw = localStorage.getItem(key)
-+  try {
-+    return raw ? JSON.parse(raw) : []
-+  } catch {
-+    return []
-+  }
-+}
-+
-+export async function saveOrders(orders: Order[], userId?: string): Promise<void> {
-+  if (typeof window === 'undefined') return
-+  const key = userId ? `${ORDERS_KEY}_${userId}` : ORDERS_KEY
-+  localStorage.setItem(key, JSON.stringify(orders))
-+}
-+
-+export async function getOrderById(orderId: string, userId?: string): Promise<Order | null> {
-+  const orders = await getOrders(userId)
-+  return orders.find(order => order.id === orderId) || null
-+}
-+
- /* Very small CSV parser: supports quoted fields and commas */
+export type Product = {
+  id: string | number
+  title: string
+  slug: string
+  description?: string
+  price: number
+  compare_at_price?: number | null
+  currency?: string
+  sku?: string
+  barcode?: string
+  inventory_qty?: number
+  status?: 'active' | 'draft'
+  category?: string
+  tags?: string
+  option1_name?: string
+  option1_value?: string
+  option2_name?: string
+  option2_value?: string
+  image1_url?: string
+  image2_url?: string
+  image3_url?: string
+}
+
+const STORAGE_KEY = 'products_dev'
+
+export async function initializeDatabase(): Promise<void> {
+  if (typeof window === 'undefined') return
+  const raw = localStorage.getItem(STORAGE_KEY)
+  if (!raw) localStorage.setItem(STORAGE_KEY, JSON.stringify([]))
+}
+
+export async function getAllProducts(): Promise<Product[]> {
+  if (typeof window === 'undefined') return []
+  const raw = localStorage.getItem(STORAGE_KEY)
+  try {
+    return raw ? (JSON.parse(raw) as Product[]) : []
+  } catch {
+    return []
+  }
+}
+
+export async function setAllProducts(items: Product[]): Promise<void> {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+}
+
+export async function importProductsFromCSV(csvText: string): Promise<{ imported: number; errors: number }> {
+  const rows = parseCSV(csvText)
+  const products: Product[] = []
+  let errors = 0
+
+  for (const r of rows) {
+    try {
+      const title = val(r.title)
+      const slug = slugify(val(r.slug) || title)
+      const price = toNumber(val(r.price))
+      const image1_url = val(r.image1_url)
+
+      if (!title || !slug || Number.isNaN(price) || !image1_url) throw new Error('Missing required fields')
+
+      const p: Product = {
+        id: val(r.id) || slug,
+        title,
+        slug,
+        description: val(r.description),
+        price: round2(price),
+        compare_at_price: toNumberOrNull(val(r.compare_at_price)),
+        currency: val(r.currency) || 'USD',
+        sku: val(r.sku),
+        barcode: val(r.barcode),
+        inventory_qty: toInt(val(r.inventory_qty), 0),
+        status: (val(r.status) as any) || 'active',
+        category: val(r.category),
+        tags: val(r.tags),
+        option1_name: val(r.option1_name),
+        option1_value: val(r.option1_value),
+        option2_name: val(r.option2_name),
+        option2_value: val(r.option2_value),
+        image1_url,
+        image2_url: val(r.image2_url),
+        image3_url: val(r.image3_url),
+      }
+      products.push(p)
+    } catch {
+      errors += 1
+    }
+  }
+
+  const existing = await getAllProducts()
+  const merged = mergeBySlug(existing, products)
+  await setAllProducts(merged)
+
+  return { imported: products.length, errors }
+}
+
+function val(x: unknown): string {
+  return typeof x === 'string' ? x.trim() : x == null ? '' : String(x).trim()
+}
+function toNumber(x: string): number { return Number.parseFloat(x) }
+function toNumberOrNull(x: string): number | null {
+  const n = Number.parseFloat(x)
+  return Number.isNaN(n) ? null : n
+}
+function toInt(x: string, d = 0): number {
+  const n = Number.parseInt(x, 10)
+  return Number.isNaN(n) ? d : n
+}
+function round2(n: number): number { return Math.round(n * 100) / 100 }
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+function mergeBySlug(a: Product[], b: Product[]): Product[] {
+  const map = new Map<string, Product>()
+  for (const p of a) map.set(p.slug, p)
+  for (const p of b) map.set(p.slug, p)
+  return Array.from(map.values())
+}
+
+function parseCSV(text: string): Record<string, string>[] {
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length)
+  if (lines.length === 0) return []
+  const headers = splitCSVLine(lines[0]).map(h => h.trim().toLowerCase())
+  const out: Record<string, string>[] = []
+  for (let i = 1; i < lines.length; i++) {
+    const cols = splitCSVLine(lines[i])
+    const row: Record<string, string> = {}
+    for (let j = 0; j < headers.length; j++) row[headers[j]] = cols[j] ?? ''
+    out.push(row)
+  }
+  return out
+}
+function splitCSVLine(line: string): string[] {
+  const res: string[] = []
+  let cur = ''
+  let q = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"' ) {
+      if (q && line[i+1] === '"') { cur += '"'; i++ } else { q = !q }
+    } else if (ch === ',' && !q) {
+      res.push(cur); cur = ''
+    } else {
+      cur += ch
+    }
+  }
+  res.push(cur)
+  return res
+}
