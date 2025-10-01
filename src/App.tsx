@@ -2,8 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Elements } from '@stripe/react-stripe-js';
 import { stripePromise } from './lib/stripe';
-import { AuthProvider } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
+import { LocalAuthProvider } from './context/LocalAuthContext';
+import { LocalCartProvider } from './context/LocalCartContext';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import CartDrawer from './components/Cart/CartDrawer';
@@ -15,6 +15,7 @@ import SignUpForm from './components/Auth/SignUpForm';
 import Checkout from './pages/Checkout';
 import CheckoutSuccess from './pages/CheckoutSuccess';
 import CheckoutCancel from './pages/CheckoutCancel';
+import OrderConfirmation from './pages/OrderConfirmation';
 import Account from './pages/Account';
 import CommandCenter from './pages/CommandCenter';
 import AdminPanel from './pages/AdminPanel';
@@ -24,8 +25,8 @@ function App() {
   return (
     <div className="dark">
       <Elements stripe={stripePromise}>
-        <AuthProvider>
-          <CartProvider>
+        <LocalAuthProvider>
+          <LocalCartProvider>
             <Router>
               <Routes>
                 {/* Auth Routes */}
@@ -36,7 +37,7 @@ function App() {
                 <Route path="/" element={<Layout />}>
                   <Route index element={<Home />} />
                   <Route path="shop" element={<Shop />} />
-                  <Route path="p/:slug" element={<ProductDetail />} />
+                  <Route path="product/:slug" element={<ProductDetail />} />
                   <Route path="collections" element={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><p className="text-dark-text text-2xl">Collections Page Coming Soon</p></div>} />
                   <Route path="command-center" element={<CommandCenter />} />
                   <Route path="about" element={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><p className="text-dark-text text-2xl">About Page Coming Soon</p></div>} />
@@ -51,6 +52,7 @@ function App() {
                   
                   <Route path="checkout/success" element={<CheckoutSuccess />} />
                   <Route path="checkout/cancel" element={<CheckoutCancel />} />
+                  <Route path="order/:id" element={<OrderConfirmation />} />
                   
                   <Route path="account/*" element={
                     <ProtectedRoute>
@@ -75,8 +77,8 @@ function App() {
               {/* Global Components */}
               <CartDrawer />
             </Router>
-          </CartProvider>
-        </AuthProvider>
+          </LocalCartProvider>
+        </LocalAuthProvider>
       </Elements>
     </div>
   );

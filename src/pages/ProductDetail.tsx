@@ -15,18 +15,16 @@ import {
   RotateCcw,
   Star
 } from 'lucide-react';
-import { getProductBySlug, formatPrice, listProducts } from '../data/catalog';
-import { useCart } from '../context/CartContext';
-import type { Product, Variant } from '../types/database';
+import { getAllProducts, Product } from '../lib/database';
+import { useCart } from '../context/LocalCartContext';
 
 const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { addItem } = useCart();
+  const { addToCart } = useCart();
   
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
-  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -51,21 +49,17 @@ const ProductDetail: React.FC = () => {
   const loadProduct = async (productSlug: string) => {
     setLoading(true);
     try {
-      const productData = await getProductBySlug(productSlug);
-      setProduct(productData);
+      const allProducts = await getAllProducts();
+      const productData = allProducts.find(p => p.slug === productSlug);
       
-      // Set first variant as default if available
-      if (productData?.variants && productData.variants.length > 0) {
-        setSelectedVariant(productData.variants[0]);
-      }
-
-      // Load related products from same category
-      if (productData?.category_id) {
-        const related = await listProducts({ 
-          categorySlug: productData.category?.slug,
-          limit: 4 
-        });
-        setRelatedProducts(related.filter(p => p.id !== productData.id));
+      if (productData) {
+        setProduct(productData);
+        
+        // Load related products from same category
+        const related = allProducts.filter(p => 
+          p.category === productData.category && p.id !== productData.id
+        ).slice(0, 4);
+        setRelatedProducts(related);
       }
     } catch (error) {
       console.error('Error loading product:', error);
@@ -77,14 +71,14 @@ const ProductDetail: React.FC = () => {
   const handleAddToCart = async () => {
     if (!product) return;
     
-    await addItem(product, selectedVariant || undefined, quantity);
+    await addToCart(product, { size: selectedSize, color: selectedColor, quantity });
     // TODO: Show success toast
   };
 
   const handleBuyNow = async () => {
     if (!product) return;
     
-    await addItem(product, selectedVariant || undefined, quantity);
+    await addToCart(product, { size: selectedSize, color: selectedColor, quantity });
     navigate('/checkout');
   };
 
@@ -95,8 +89,8 @@ const ProductDetail: React.FC = () => {
     }));
   };
 
-  const currentPrice = selectedVariant?.price_cents || product?.price_cents || 0;
-  const comparePrice = product?.compare_at_cents;
+  const currentPrice = product?.price || 0;
+  const comparePrice = product?.compare_at_price;
   const isOnSale = comparePrice && comparePrice > currentPrice;
 
   if (loading) {
@@ -147,14 +141,14 @@ const ProductDetail: React.FC = () => {
           >
             {/* Main Image */}
             <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-dark-card border border-dark-border">
-              {product.images && product.images.length > 0 ? (
+              {product.image1_url ? (
                 <motion.img
                   key={selectedImageIndex}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.3 }}
-                  src={product.images[selectedImageIndex]?.url}
-                  alt={product.images[selectedImageIndex]?.alt || product.name}
+                  src={[product.image1_url, product.image2_url, product.image3_url].filter(Boolean)[selectedImageIndex] || product.image1_url}
+                  alt={product.title}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -165,11 +159,11 @@ const ProductDetail: React.FC = () => {
             </div>
 
             {/* Thumbnail Images */}
-            {product.images && product.images.length > 1 && (
+            {[product.image1_url, product.image2_url, product.image3_url].filter(Boolean).length > 1 && (
               <div className="grid grid-cols-4 gap-2">
-                {product.images.slice(0, 4).map((image, index) => (
+                {[product.image1_url, product.image2_url, product.image3_url].filter(Boolean).slice(0, 4).map((imageUrl, index) => (
                   <motion.button
-                    key={image.id}
+                    key={index}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setSelectedImageIndex(index)}
@@ -180,8 +174,8 @@ const ProductDetail: React.FC = () => {
                     }`}
                   >
                     <img
-                      src={image.url}
-                      alt={image.alt || product.name}
+                      src={imageUrl}
+                      alt={product.title}
                       className="w-full h-full object-cover"
                     />
                   </motion.button>
@@ -201,7 +195,7 @@ const ProductDetail: React.FC = () => {
             <div className="flex items-center justify-between">
               {product.category && (
                 <span className="text-electric-400 font-medium text-sm uppercase tracking-wide">
-                  {product.category.name}
+                  {product.category}
                 </span>
               )}
               <div className="flex items-center space-x-1">
@@ -214,18 +208,18 @@ const ProductDetail: React.FC = () => {
 
             {/* Title */}
             <h1 className="text-3xl md:text-4xl font-bold font-space text-dark-text">
-              {product.name}
+              {product.title}
             </h1>
 
             {/* Price */}
             <div className="flex items-center space-x-3">
               <span className="text-3xl font-bold text-electric-400">
-                {formatPrice(currentPrice)}
+                ${currentPrice.toFixed(2)}
               </span>
               {isOnSale && (
                 <>
                   <span className="text-xl text-dark-muted line-through">
-                    {formatPrice(comparePrice)}
+                    ${comparePrice.toFixed(2)}
                   </span>
                   <span className="bg-gradient-to-r from-electric-500 to-neon-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
                     Save {Math.round(((comparePrice - currentPrice) / comparePrice) * 100)}%
@@ -567,13 +561,13 @@ const ProductDetail: React.FC = () => {
                   whileHover={{ y: -5 }}
                   className="group"
                 >
-                  <Link to={`/p/${relatedProduct.slug}`} className="block">
+                  <Link to={`/product/${relatedProduct.slug}`} className="block">
                     <div className="bg-dark-card border border-dark-border rounded-2xl overflow-hidden hover:border-electric-400/50 transition-all duration-300">
                       <div className="aspect-[3/4] relative overflow-hidden">
-                        {relatedProduct.images?.[0] ? (
+                        {relatedProduct.image1_url ? (
                           <img
-                            src={relatedProduct.images[0].url}
-                            alt={relatedProduct.images[0].alt || relatedProduct.name}
+                            src={relatedProduct.image1_url}
+                            alt={relatedProduct.title}
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                           />
                         ) : (
@@ -584,10 +578,10 @@ const ProductDetail: React.FC = () => {
                       </div>
                       <div className="p-4">
                         <h3 className="text-dark-text font-semibold mb-2 group-hover:text-electric-400 transition-colors duration-200 line-clamp-2">
-                          {relatedProduct.name}
+                          {relatedProduct.title}
                         </h3>
                         <p className="text-electric-400 font-bold">
-                          {formatPrice(relatedProduct.price_cents)}
+                          ${relatedProduct.price.toFixed(2)}
                         </p>
                       </div>
                     </div>

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, ShoppingBag, Menu, X, ChevronDown, Filter } from 'lucide-react';
 import AccountDropdown from '../Auth/AccountDropdown';
-import { useCart } from '../../context/CartContext';
+import { useCart } from '../../context/LocalCartContext';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
