@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ShoppingBag, Filter, X, ChevronDown, Eye, Heart, Grid2x2 as Grid, List } from 'lucide-react';
-import { listProducts, listCategories, formatPrice } from '../data/catalog';
+import { getAllProducts, Product } from '../lib/database';
 import { useCart } from '../context/CartContext';
-import type { Product, Category } from '../types/database';
+import { useCart as useLocalCart } from '../context/LocalCartContext';
 
 interface FilterState {
   categories: string[];
@@ -33,20 +33,20 @@ const ProductSkeleton: React.FC = () => (
   </div>
 );
 
-const ProductCard: React.FC<{ product: Product; index: number; viewMode: 'grid' | 'list' }> = ({ 
+const ProductCard: React.FC<{ product: Product; index: number; viewMode: 'grid' | 'list' }> = ({
   product, 
   index, 
   viewMode 
 }) => {
-  const { addItem } = useCart();
+  const { addToCart } = useLocalCart();
   const [isHovered, setIsHovered] = useState(false);
-  const primaryImage = product.images?.[0];
-  const secondaryImage = product.images?.[1];
+  const primaryImage = product.image1_url;
+  const secondaryImage = product.image2_url;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem(product);
+    addToCart(product);
   };
 
   const handleQuickView = (e: React.MouseEvent) => {
@@ -70,8 +70,8 @@ const ProductCard: React.FC<{ product: Product; index: number; viewMode: 'grid' 
             <div className="w-48 h-48 relative overflow-hidden flex-shrink-0">
               {primaryImage ? (
                 <img
-                  src={primaryImage.url}
-                  alt={primaryImage.alt || product.name}
+                  src={primaryImage}
+                  alt={product.title}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
               ) : (
@@ -85,7 +85,7 @@ const ProductCard: React.FC<{ product: Product; index: number; viewMode: 'grid' 
             <div className="flex-1 p-6 flex flex-col justify-between">
               <div>
                 <h3 className="text-dark-text font-semibold text-xl mb-2 group-hover:text-electric-400 transition-colors duration-200">
-                  {product.name}
+                  {product.title}
                 </h3>
                 
                 {product.description && (
@@ -96,17 +96,17 @@ const ProductCard: React.FC<{ product: Product; index: number; viewMode: 'grid' 
 
                 <div className="flex items-center space-x-2 mb-4">
                   <span className="text-electric-400 font-bold text-xl">
-                    {formatPrice(product.price_cents)}
+                    ${product.price.toFixed(2)}
                   </span>
-                  {product.compare_at_cents && product.compare_at_cents > product.price_cents && (
+                  {product.compare_at_price && product.compare_at_price > product.price && (
                     <span className="text-dark-muted line-through text-lg">
-                      {formatPrice(product.compare_at_cents)}
+                      ${product.compare_at_price.toFixed(2)}
                     </span>
                   )}
                 </div>
 
                 {product.category && (
-                  <p className="text-dark-muted text-sm">{product.category.name}</p>
+                  <p className="text-dark-muted text-sm">{product.category}</p>
                 )}
               </div>
 
@@ -160,8 +160,8 @@ const ProductCard: React.FC<{ product: Product; index: number; viewMode: 'grid' 
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  src={secondaryImage.url}
-                  alt={secondaryImage.alt || product.name}
+                  src={secondaryImage}
+                  alt={product.title}
                   className="w-full h-full object-cover"
                 />
               ) : primaryImage ? (
@@ -171,8 +171,8 @@ const ProductCard: React.FC<{ product: Product; index: number; viewMode: 'grid' 
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  src={primaryImage.url}
-                  alt={primaryImage.alt || product.name}
+                  src={primaryImage}
+                  alt={product.title}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -228,39 +228,37 @@ const ProductCard: React.FC<{ product: Product; index: number; viewMode: 'grid' 
           {/* Product Info */}
           <div className="p-4">
             <h3 className="text-dark-text font-semibold text-lg mb-2 group-hover:text-electric-400 transition-colors duration-200 line-clamp-2">
-              {product.name}
+              {product.title}
             </h3>
             
             <div className="flex items-center space-x-2 mb-2">
               <span className="text-electric-400 font-bold text-lg">
-                {formatPrice(product.price_cents)}
+                ${product.price.toFixed(2)}
               </span>
-              {product.compare_at_cents && product.compare_at_cents > product.price_cents && (
+              {product.compare_at_price && product.compare_at_price > product.price && (
                 <span className="text-dark-muted line-through text-sm">
-                  {formatPrice(product.compare_at_cents)}
+                  ${product.compare_at_price.toFixed(2)}
                 </span>
               )}
             </div>
 
             {product.category && (
-              <p className="text-dark-muted text-sm">{product.category.name}</p>
+              <p className="text-dark-muted text-sm">{product.category}</p>
             )}
 
-            {/* Variants Preview */}
-            {product.variants && product.variants.length > 0 && (
-              <div className="flex items-center space-x-1 mt-2">
-                {product.variants.slice(0, 4).map((variant, idx) => (
-                  <div
-                    key={variant.id}
-                    className="w-4 h-4 rounded-full bg-dark-border border border-dark-muted"
-                    title={variant.name}
-                  />
-                ))}
-                {product.variants.length > 4 && (
-                  <span className="text-dark-muted text-xs">+{product.variants.length - 4}</span>
-                )}
-              </div>
-            )}
+            {/* Options Preview */}
+            <div className="flex items-center space-x-1 mt-2">
+              {product.option1_value && (
+                <span className="text-dark-muted text-xs bg-dark-border px-2 py-1 rounded">
+                  {product.option1_value}
+                </span>
+              )}
+              {product.option2_value && (
+                <span className="text-dark-muted text-xs bg-dark-border px-2 py-1 rounded">
+                  {product.option2_value}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </Link>
@@ -269,7 +267,7 @@ const ProductCard: React.FC<{ product: Product; index: number; viewMode: 'grid' 
 };
 
 const FilterSidebar: React.FC<{
-  categories: Category[];
+  categories: string[];
   filters: FilterState;
   onFiltersChange: (filters: FilterState) => void;
   isOpen: boolean;
@@ -365,14 +363,14 @@ const FilterSidebar: React.FC<{
               className="space-y-2 overflow-hidden"
             >
               {categories.map((category) => (
-                <label key={category.id} className="flex items-center space-x-2 cursor-pointer">
+                <label key={category} className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={filters.categories.includes(category.id)}
-                    onChange={() => handleCategoryChange(category.id)}
+                    checked={filters.categories.includes(category)}
+                    onChange={() => handleCategoryChange(category)}
                     className="w-4 h-4 text-electric-500 bg-dark-bg border-dark-border rounded focus:ring-electric-500 focus:ring-2"
                   />
-                  <span className="text-dark-muted text-sm">{category.name}</span>
+                  <span className="text-dark-muted text-sm">{category}</span>
                 </label>
               ))}
             </motion.div>
@@ -554,7 +552,7 @@ const Shop: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('featured');
@@ -580,11 +578,10 @@ const Shop: React.FC = () => {
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     if (categoryParam) {
-      const category = categories.find(c => c.slug === categoryParam);
-      if (category && !filters.categories.includes(category.id)) {
+      if (categories.includes(categoryParam) && !filters.categories.includes(categoryParam)) {
         setFilters(prev => ({
           ...prev,
-          categories: [category.id]
+          categories: [categoryParam]
         }));
       }
     }
@@ -593,13 +590,11 @@ const Shop: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [productsData, categoriesData] = await Promise.all([
-        listProducts({ limit: 100 }),
-        listCategories(),
-      ]);
+      const productsData = await getAllProducts();
+      const uniqueCategories = [...new Set(productsData.map(p => p.category).filter(Boolean))] as string[];
       
       setProducts(productsData);
-      setCategories(categoriesData);
+      setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error loading shop data:', error);
     } finally {
@@ -613,29 +608,30 @@ const Shop: React.FC = () => {
     // Apply category filter
     if (filters.categories.length > 0) {
       filtered = filtered.filter(product => 
-        product.category_id && filters.categories.includes(product.category_id)
+        product.category && filters.categories.includes(product.category)
       );
     }
 
     // Apply price filter
     filtered = filtered.filter(product => {
-      const price = product.price_cents / 100;
+      const price = product.price;
       return price >= filters.priceRange[0] && price <= filters.priceRange[1];
     });
 
     // Apply sorting
     switch (sortBy) {
       case 'price-low':
-        filtered.sort((a, b) => a.price_cents - b.price_cents);
+        filtered.sort((a, b) => a.price - b.price);
         break;
       case 'price-high':
-        filtered.sort((a, b) => b.price_cents - a.price_cents);
+        filtered.sort((a, b) => b.price - a.price);
         break;
       case 'newest':
-        filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        // Sort by ID as a proxy for creation order
+        filtered.sort((a, b) => String(b.id).localeCompare(String(a.id)));
         break;
       case 'name':
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        filtered.sort((a, b) => a.title.localeCompare(b.title));
         break;
       default:
         // Featured - keep original order
