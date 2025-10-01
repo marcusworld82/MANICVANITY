@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ShoppingBag, Filter, X, ChevronDown, Eye, Heart, Grid2x2 as Grid, List } from 'lucide-react';
-import { getProducts, getCategories, formatPrice } from '../data/localCatalog';
+import { listProducts, listCategories, formatPrice } from '../data/catalog';
 import { useCart } from '../context/CartContext';
-import type { LocalProduct as Product, LocalCategory as Category } from '../data/localCatalog';
+import type { Product, Category } from '../types/database';
 
 interface FilterState {
   categories: string[];
@@ -96,17 +96,17 @@ const ProductCard: React.FC<{ product: Product; index: number; viewMode: 'grid' 
 
                 <div className="flex items-center space-x-2 mb-4">
                   <span className="text-electric-400 font-bold text-xl">
-                    {formatPrice(product.base_price)}
+                    {formatPrice(product.price_cents)}
                   </span>
-                  {product.variants && product.variants.length > 0 && (
+                  {product.compare_at_cents && product.compare_at_cents > product.price_cents && (
                     <span className="text-dark-muted line-through text-lg">
-                      {formatPrice(product.base_price + 10)}
+                      {formatPrice(product.compare_at_cents)}
                     </span>
                   )}
                 </div>
 
                 {product.category && (
-                  <p className="text-dark-muted text-sm capitalize">{product.category}</p>
+                  <p className="text-dark-muted text-sm">{product.category.name}</p>
                 )}
               </div>
 
@@ -233,17 +233,17 @@ const ProductCard: React.FC<{ product: Product; index: number; viewMode: 'grid' 
             
             <div className="flex items-center space-x-2 mb-2">
               <span className="text-electric-400 font-bold text-lg">
-                {formatPrice(product.base_price)}
+                {formatPrice(product.price_cents)}
               </span>
-              {product.variants && product.variants.length > 0 && (
+              {product.compare_at_cents && product.compare_at_cents > product.price_cents && (
                 <span className="text-dark-muted line-through text-sm">
-                  {formatPrice(product.base_price + 10)}
+                  {formatPrice(product.compare_at_cents)}
                 </span>
               )}
             </div>
 
             {product.category && (
-              <p className="text-dark-muted text-sm capitalize">{product.category}</p>
+              <p className="text-dark-muted text-sm">{product.category.name}</p>
             )}
 
             {/* Variants Preview */}
@@ -368,8 +368,8 @@ const FilterSidebar: React.FC<{
                 <label key={category.id} className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={filters.categories.includes(category.slug)}
-                    onChange={() => handleCategoryChange(category.slug)}
+                    checked={filters.categories.includes(category.id)}
+                    onChange={() => handleCategoryChange(category.id)}
                     className="w-4 h-4 text-electric-500 bg-dark-bg border-dark-border rounded focus:ring-electric-500 focus:ring-2"
                   />
                   <span className="text-dark-muted text-sm">{category.name}</span>
@@ -580,20 +580,23 @@ const Shop: React.FC = () => {
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     if (categoryParam) {
-      if (!filters.categories.includes(categoryParam)) {
+      const category = categories.find(c => c.slug === categoryParam);
+      if (category && !filters.categories.includes(category.id)) {
         setFilters(prev => ({
           ...prev,
-          categories: [categoryParam]
+          categories: [category.id]
         }));
       }
     }
-  }, [searchParams, categories, filters.categories]);
+  }, [searchParams, categories]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const productsData = getProducts({ limit: 100 });
-      const categoriesData = getCategories();
+      const [productsData, categoriesData] = await Promise.all([
+        listProducts({ limit: 100 }),
+        listCategories(),
+      ]);
       
       setProducts(productsData);
       setCategories(categoriesData);
@@ -610,23 +613,23 @@ const Shop: React.FC = () => {
     // Apply category filter
     if (filters.categories.length > 0) {
       filtered = filtered.filter(product => 
-        filters.categories.includes(product.category)
+        product.category_id && filters.categories.includes(product.category_id)
       );
     }
 
     // Apply price filter
     filtered = filtered.filter(product => {
-     const price = product.base_price;
+      const price = product.price_cents / 100;
       return price >= filters.priceRange[0] && price <= filters.priceRange[1];
     });
 
     // Apply sorting
     switch (sortBy) {
       case 'price-low':
-        filtered.sort((a, b) => a.base_price - b.base_price);
+        filtered.sort((a, b) => a.price_cents - b.price_cents);
         break;
       case 'price-high':
-        filtered.sort((a, b) => b.base_price - a.base_price);
+        filtered.sort((a, b) => b.price_cents - a.price_cents);
         break;
       case 'newest':
         filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

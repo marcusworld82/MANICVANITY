@@ -1,15 +1,15 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Minus, ShoppingBag, ArrowRight, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useCart } from '../../context/LocalCartContext';
-import { formatPrice } from '../../data/localCatalog';
+import { X, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
+import { useCart } from '../../context/CartContext';
+import { formatPrice } from '../../data/catalog';
 
 const CartDrawer: React.FC = () => {
   const { isOpen, closeCart, items, itemCount, subtotal, updateQuantity, removeItem } = useCart();
 
   const handleCheckout = async () => {
-    closeCart();
+    // Navigate to checkout page instead of direct Stripe
+    window.location.href = '/checkout';
   };
 
   return (
@@ -35,7 +35,7 @@ const CartDrawer: React.FC = () => {
           >
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-dark-border">
-              <h2 className="text-xl font-bold text-dark-text flex items-center space-x-2">
+              <h2 className="text-xl font-semibold text-dark-text flex items-center space-x-2">
                 <ShoppingBag size={20} />
                 <span>Cart ({itemCount})</span>
               </h2>
@@ -53,17 +53,9 @@ const CartDrawer: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-6">
               {items.length === 0 ? (
                 <div className="text-center py-12">
-                  <ShoppingBag size={64} className="text-dark-muted mx-auto mb-6" />
-                  <h3 className="text-dark-text text-xl font-semibold mb-2">Your cart is empty</h3>
-                  <p className="text-dark-muted mb-6">Discover our latest collection and add some rebellious pieces</p>
-                  <Link
-                    to="/shop"
-                    onClick={closeCart}
-                    className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-electric-500 to-neon-500 text-white rounded-lg font-semibold hover:from-electric-600 hover:to-neon-600 transition-all duration-200"
-                  >
-                    <span>Start Shopping</span>
-                    <ArrowRight size={18} />
-                  </Link>
+                  <ShoppingBag size={48} className="text-dark-muted mx-auto mb-4" />
+                  <p className="text-dark-muted text-lg mb-2">Your cart is empty</p>
+                  <p className="text-dark-muted text-sm">Add some items to get started</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -78,9 +70,9 @@ const CartDrawer: React.FC = () => {
                     >
                       {/* Product Image */}
                       <div className="w-16 h-16 bg-dark-border rounded-lg flex-shrink-0 overflow-hidden">
-                        {item.product?.images?.[0]?.image_url ? (
+                        {item.product?.images?.[0] ? (
                           <img
-                            src={item.product.images[0].image_url}
+                            src={item.product.images[0].url}
                             alt={item.product.images[0].alt || item.product.name}
                             className="w-full h-full object-cover"
                           />
@@ -93,53 +85,47 @@ const CartDrawer: React.FC = () => {
 
                       {/* Product Details */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-dark-text font-semibold text-sm truncate">
-                          {item.product_name}
+                        <h3 className="text-dark-text font-medium truncate">
+                          {item.product?.name}
                         </h3>
-                        {(item.size || item.color) && (
-                          <p className="text-dark-muted text-xs">
-                            {item.size && `Size: ${item.size}`}
-                            {item.size && item.color && ' • '}
-                            {item.color && `Color: ${item.color}`}
-                          </p>
+                        {item.variant && (
+                          <p className="text-dark-muted text-sm">{item.variant.name}</p>
                         )}
                         <p className="text-electric-400 font-semibold">
-                          {formatPrice((item.base_price + (item.price_modifier || 0)))}
+                          {formatPrice(item.variant?.price_cents || item.product?.price_cents || 0)}
                         </p>
 
                         {/* Quantity Controls */}
-                        <div className="flex items-center justify-between mt-3">
-                          <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 mt-2">
                           <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.id, item.qty - 1)}
                             className="w-8 h-8 bg-dark-border rounded-full flex items-center justify-center text-dark-muted hover:text-electric-400 hover:bg-electric-500/20 transition-colors duration-200"
                           >
                             <Minus size={14} />
                           </motion.button>
                           
-                          <span className="text-dark-text font-semibold w-8 text-center">
-                            {item.quantity}
+                          <span className="text-dark-text font-medium w-8 text-center">
+                            {item.qty}
                           </span>
                           
                           <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.id, item.qty + 1)}
                             className="w-8 h-8 bg-dark-border rounded-full flex items-center justify-center text-dark-muted hover:text-electric-400 hover:bg-electric-500/20 transition-colors duration-200"
                           >
                             <Plus size={14} />
                           </motion.button>
-                          </div>
                           
                           <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
                             onClick={() => removeItem(item.id)}
-                            className="text-red-400 hover:text-red-300 p-1"
+                            className="ml-2 text-red-400 hover:text-red-300 text-sm"
                           >
-                            <Trash2 size={14} />
+                            Remove
                           </motion.button>
                         </div>
                       </div>
@@ -152,37 +138,21 @@ const CartDrawer: React.FC = () => {
             {/* Footer */}
             {items.length > 0 && (
               <div className="border-t border-dark-border p-6 space-y-4">
-                <div className="space-y-2 text-sm text-dark-muted">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>{formatPrice(subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Shipping</span>
-                    <span>$6.00</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Tax (est.)</span>
-                    <span>{formatPrice(subtotal * 0.085)}</span>
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center text-lg font-bold border-t border-dark-border pt-3">
+                <div className="flex justify-between items-center text-lg font-semibold">
                   <span className="text-dark-text">Subtotal:</span>
-                  <span className="text-electric-400">{formatPrice(subtotal + 6.00 + (subtotal * 0.085))}</span>
+                  <span className="text-electric-400">{formatPrice(subtotal)}</span>
                 </div>
 
                 <div className="space-y-3">
-                  <Link
-                    to="/checkout"
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={handleCheckout}
-                    className="block w-full py-3 bg-gradient-to-r from-electric-500 to-neon-500 text-white rounded-lg font-semibold hover:from-electric-600 hover:to-neon-600 transition-all duration-200 text-center"
+                    className="w-full py-3 bg-gradient-to-r from-electric-500 to-neon-500 text-white rounded-lg font-semibold hover:from-electric-600 hover:to-neon-600 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
-                    <div className="flex items-center justify-center space-x-2">
-                      <span>Checkout</span>
-                      <ArrowRight size={18} />
-                    </div>
-                  </Link>
+                    <span>Checkout</span>
+                    <ArrowRight size={18} />
+                  </motion.button>
 
                   <motion.button
                     whileHover={{ scale: 1.02 }}

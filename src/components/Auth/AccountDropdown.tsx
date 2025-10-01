@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, LogOut, Settings, Package, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/LocalAuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 const AccountDropdown: React.FC = () => {
   const { user, signOut } = useAuth();

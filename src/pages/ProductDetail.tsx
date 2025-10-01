@@ -16,9 +16,8 @@ import {
   Star
 } from 'lucide-react';
 import { getProductBySlug, formatPrice, listProducts } from '../data/catalog';
-import { getProductBySlug as getLocalProductBySlug, getProducts, formatPrice as localFormatPrice } from '../data/localCatalog';
 import { useCart } from '../context/CartContext';
-import type { LocalProduct as Product, LocalVariant as Variant } from '../data/localCatalog';
+import type { Product, Variant } from '../types/database';
 
 const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -52,7 +51,7 @@ const ProductDetail: React.FC = () => {
   const loadProduct = async (productSlug: string) => {
     setLoading(true);
     try {
-      const productData = getLocalProductBySlug(productSlug);
+      const productData = await getProductBySlug(productSlug);
       setProduct(productData);
       
       // Set first variant as default if available
@@ -61,9 +60,9 @@ const ProductDetail: React.FC = () => {
       }
 
       // Load related products from same category
-      if (productData?.category) {
-        const related = getProducts({ 
-          category: productData.category,
+      if (productData?.category_id) {
+        const related = await listProducts({ 
+          categorySlug: productData.category?.slug,
           limit: 4 
         });
         setRelatedProducts(related.filter(p => p.id !== productData.id));
@@ -96,9 +95,9 @@ const ProductDetail: React.FC = () => {
     }));
   };
 
-  const currentPrice = (selectedVariant ? product.base_price + (selectedVariant.price_modifier || 0) : product?.base_price) || 0;
-  const comparePrice = currentPrice + 10; // Show a slight markup as compare price
-  const isOnSale = product?.variants && product.variants.length > 0;
+  const currentPrice = selectedVariant?.price_cents || product?.price_cents || 0;
+  const comparePrice = product?.compare_at_cents;
+  const isOnSale = comparePrice && comparePrice > currentPrice;
 
   if (loading) {
     return (
@@ -202,7 +201,7 @@ const ProductDetail: React.FC = () => {
             <div className="flex items-center justify-between">
               {product.category && (
                 <span className="text-electric-400 font-medium text-sm uppercase tracking-wide">
-                  {product.category}
+                  {product.category.name}
                 </span>
               )}
               <div className="flex items-center space-x-1">
@@ -221,12 +220,12 @@ const ProductDetail: React.FC = () => {
             {/* Price */}
             <div className="flex items-center space-x-3">
               <span className="text-3xl font-bold text-electric-400">
-                {localFormatPrice(currentPrice)}
+                {formatPrice(currentPrice)}
               </span>
               {isOnSale && (
                 <>
                   <span className="text-xl text-dark-muted line-through">
-                    {localFormatPrice(comparePrice)}
+                    {formatPrice(comparePrice)}
                   </span>
                   <span className="bg-gradient-to-r from-electric-500 to-neon-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
                     Save {Math.round(((comparePrice - currentPrice) / comparePrice) * 100)}%
@@ -588,7 +587,7 @@ const ProductDetail: React.FC = () => {
                           {relatedProduct.name}
                         </h3>
                         <p className="text-electric-400 font-bold">
-                          {localFormatPrice(relatedProduct.base_price)}
+                          {formatPrice(relatedProduct.price_cents)}
                         </p>
                       </div>
                     </div>

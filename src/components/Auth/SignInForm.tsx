@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../../context/LocalAuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 const SignInForm: React.FC = () => {
   const [email, setEmail] = useState('');

@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Elements } from '@stripe/react-stripe-js';
+import { stripePromise } from './lib/stripe';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
-import { LocalAuthProvider } from './context/LocalAuthContext';
-import { LocalCartProvider } from './context/LocalCartContext';
-import { initializeDatabase, importProductsFromCSV } from './lib/database';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import CartDrawer from './components/Cart/CartDrawer';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
+import SignInForm from './components/Auth/SignInForm';
+import SignUpForm from './components/Auth/SignUpForm';
 import Checkout from './pages/Checkout';
 import CheckoutSuccess from './pages/CheckoutSuccess';
 import CheckoutCancel from './pages/CheckoutCancel';
@@ -18,45 +19,19 @@ import Account from './pages/Account';
 import CommandCenter from './pages/CommandCenter';
 import AdminPanel from './pages/AdminPanel';
 import TestProducts from './pages/TestProducts';
-import OrderConfirmation from './pages/OrderConfirmation';
 
-export default function App() {
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    let canceled = false
-    const run = async () => {
-      try {
-        await initializeDatabase()
-      } catch (error) {
-        console.error('Database initialization error:', error)
-      } finally {
-        if (!canceled) setReady(true)
-      }
-    }
-    run()
-    return () => {
-      canceled = true
-    }
-  }, [])
-
-  // CSV upload handler
-  const onCSVSelected = async (file: File) => {
-    try {
-      const text = await file.text()
-      const result = await importProductsFromCSV(text)
-      console.log('Imported', result.imported, 'errors', result.errors)
-    } catch (e) {
-      console.error('CSV import failed:', e)
-    }
-  }
-
+function App() {
   return (
     <div className="dark">
-        <LocalAuthProvider>
-          <LocalCartProvider>
+      <Elements stripe={stripePromise}>
+        <AuthProvider>
+          <CartProvider>
             <Router>
               <Routes>
+                {/* Auth Routes */}
+                <Route path="/auth/sign-in" element={<SignInForm />} />
+                <Route path="/auth/sign-up" element={<SignUpForm />} />
+                
                 {/* Main App Routes */}
                 <Route path="/" element={<Layout />}>
                   <Route index element={<Home />} />
@@ -74,11 +49,8 @@ export default function App() {
                     </ProtectedRoute>
                   } />
                   
-                  <Route path="order/:id" element={
-                    <ProtectedRoute>
-                      <OrderConfirmation />
-                    </ProtectedRoute>
-                  } />
+                  <Route path="checkout/success" element={<CheckoutSuccess />} />
+                  <Route path="checkout/cancel" element={<CheckoutCancel />} />
                   
                   <Route path="account/*" element={
                     <ProtectedRoute>
@@ -103,8 +75,11 @@ export default function App() {
               {/* Global Components */}
               <CartDrawer />
             </Router>
-          </LocalCartProvider>
-        </LocalAuthProvider>
+          </CartProvider>
+        </AuthProvider>
+      </Elements>
     </div>
   );
 }
+
+export default App;

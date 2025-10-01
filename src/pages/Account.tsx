@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Package, MapPin, Heart, Settings, User } from 'lucide-react';
-import { useAuth } from '../context/LocalAuthContext';
+import { useAuth } from '../context/AuthContext';
 
 const Account: React.FC = () => {
   const { user } = useAuth();
