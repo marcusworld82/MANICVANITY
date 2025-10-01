@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useLocalAuth } from './LocalAuthContext';
+import { useLocalAuth } from '../context/LocalAuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
