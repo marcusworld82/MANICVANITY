@@ -33,7 +33,6 @@ function App() {
       importProductsFromCSV(csvData).then(result => {
         console.log('Products imported:', result.imported, 'errors:', result.errors);
       });
-      }
     } catch (error) {
       console.error('Database initialization error:', error);
     }
