@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ShoppingBag, Filter } from 'lucide-react';
 import { listProducts, listCategories, formatPrice } from '../data/catalog';
 import { useCart } from '../context/CartContext';
@@ -96,14 +96,22 @@ const ProductCard: React.FC<{ product: Product; index: number }> = ({ product, i
 };
 
 const Shop: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || '');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, [selectedCategory]);
+
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    if (categoryParam !== selectedCategory) {
+      setSelectedCategory(categoryParam || '');
+    }
+  }, [searchParams]);
 
   const loadData = async () => {
     setLoading(true);
@@ -133,7 +141,10 @@ const Shop: React.FC = () => {
           className="text-center mb-12"
         >
           <h1 className="text-4xl md:text-5xl font-bold font-space text-dark-text mb-4">
-            Shop Collection
+            {selectedCategory ? 
+              categories.find(c => c.slug === selectedCategory)?.name || 'Shop Collection' 
+              : 'Shop Collection'
+            }
           </h1>
           <p className="text-dark-muted text-lg max-w-2xl mx-auto">
             Discover pieces that define your rebellion. Each item is crafted for those who dare to be different.

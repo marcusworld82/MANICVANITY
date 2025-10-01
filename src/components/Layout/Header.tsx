@@ -1,20 +1,28 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, ShoppingBag, Menu, X } from 'lucide-react';
+import { Search, ShoppingBag, Menu, X, ChevronDown } from 'lucide-react';
 import AccountDropdown from '../Auth/AccountDropdown';
 import { useCart } from '../../context/CartContext';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const { itemCount, openCart } = useCart();
 
   const navItems = [
     { name: 'Shop', href: '/shop' },
-    { name: 'Collections', href: '/collections' },
+    { name: 'Collections', href: '/collections', hasDropdown: true },
     { name: 'Command Center', href: '/command-center' },
     { name: 'About', href: '/about' },
     { name: 'Contact', href: '/contact' }
+  ];
+
+  const categories = [
+    { name: 'Electric Nights', href: '/shop?category=electric-nights' },
+    { name: 'Neon Dreams', href: '/shop?category=neon-dreams' },
+    { name: 'Emerald Edge', href: '/shop?category=emerald-edge' },
+    { name: 'Dark Matter', href: '/shop?category=dark-matter' }
   ];
 
   return (
@@ -40,13 +48,54 @@ const Header: React.FC = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-8">
             {navItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className="text-dark-muted hover:text-electric-400 transition-colors duration-200 font-medium"
-              >
-                {item.name}
-              </Link>
+              <div key={item.name} className="relative">
+                {item.hasDropdown ? (
+                  <div
+                    className="relative"
+                    onMouseEnter={() => setShowCategoryMenu(true)}
+                    onMouseLeave={() => setShowCategoryMenu(false)}
+                  >
+                    <button className="flex items-center space-x-1 text-dark-muted hover:text-electric-400 transition-colors duration-200 font-medium">
+                      <span>{item.name}</span>
+                      <ChevronDown size={16} />
+                    </button>
+                    
+                    {showCategoryMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute top-full left-0 mt-2 w-64 bg-dark-card border border-dark-border rounded-xl shadow-xl py-2"
+                      >
+                        {categories.map((category) => (
+                          <Link
+                            key={category.name}
+                            to={category.href}
+                            className="block px-4 py-3 text-dark-muted hover:text-electric-400 hover:bg-dark-bg/50 transition-colors duration-200"
+                          >
+                            {category.name}
+                          </Link>
+                        ))}
+                        <div className="border-t border-dark-border mt-2 pt-2">
+                          <Link
+                            to="/shop"
+                            className="block px-4 py-3 text-electric-400 hover:bg-electric-500/10 transition-colors duration-200 font-medium"
+                          >
+                            View All Products
+                          </Link>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                ) : (
+                  <Link
+                    to={item.href}
+                    className="text-dark-muted hover:text-electric-400 transition-colors duration-200 font-medium"
+                  >
+                    {item.name}
+                  </Link>
+                )}
+              </div>
             ))}
           </nav>
 
@@ -55,9 +104,10 @@ const Header: React.FC = () => {
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
-              className="text-dark-muted hover:text-electric-400 transition-colors duration-200"
+              className="text-dark-muted hover:text-electric-400 transition-colors duration-200 relative"
             >
               <Search size={20} />
+              {/* Search functionality can be added here */}
             </motion.button>
             
             <AccountDropdown />
