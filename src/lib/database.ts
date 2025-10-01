@@ -44,6 +44,32 @@ export async function setAllProducts(items: Product[]): Promise<void> {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
 }
 
+// Mock database object for browser compatibility
+export const db = {
+  prepare: (sql: string) => {
+    console.warn('Database operations not available in browser environment:', sql)
+    return {
+      run: (...args: any[]) => console.warn('db.prepare().run() called with:', args),
+      get: (...args: any[]) => {
+        console.warn('db.prepare().get() called with:', args)
+        return null
+      },
+      all: (...args: any[]) => {
+        console.warn('db.prepare().all() called with:', args)
+        return []
+      }
+    }
+  }
+}
+
+// Generate unique ID
+export function generateId(): string {
+  return Math.random().toString(36).substr(2, 9) + Date.now().toString(36)
+}
+
+// Export slugify as createSlug for compatibility
+export const createSlug = slugify
+
 /**
  * importProductsFromCSV
  * Parses a CSV string with headers and writes normalized products into storage.
