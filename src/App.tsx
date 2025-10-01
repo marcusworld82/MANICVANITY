@@ -18,6 +18,7 @@ import Account from './pages/Account';
 import CommandCenter from './pages/CommandCenter';
 import AdminPanel from './pages/AdminPanel';
 import TestProducts from './pages/TestProducts';
+import OrderConfirmation from './pages/OrderConfirmation';
 
 export default function App() {
   const [ready, setReady] = useState(false)
@@ -73,8 +74,11 @@ export default function App() {
                     </ProtectedRoute>
                   } />
                   
-                  <Route path="checkout/success" element={<CheckoutSuccess />} />
-                  <Route path="checkout/cancel" element={<CheckoutCancel />} />
+                  <Route path="order/:id" element={
+                    <ProtectedRoute>
+                      <OrderConfirmation />
+                    </ProtectedRoute>
+                  } />
                   
                   <Route path="account/*" element={
                     <ProtectedRoute>
