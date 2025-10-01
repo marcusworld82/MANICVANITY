@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, CreditCard, Lock, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
-import { formatPrice } from '../data/catalog';
+import { useAuth } from '../context/LocalAuthContext';
+import { formatPrice } from '../data/localCatalog';
 
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
@@ -15,8 +15,8 @@ const Checkout: React.FC = () => {
 
   const shippingCents = 600; // $6.00 flat shipping
   const taxRate = 0.085; // 8.5% tax
-  const taxCents = Math.round(subtotal * taxRate);
-  const totalCents = subtotal + shippingCents + taxCents;
+  const tax = subtotal * taxRate;
+  const total = subtotal + 6.00 + tax;
 
   useEffect(() => {
     if (items.length === 0) {
@@ -121,9 +121,9 @@ const Checkout: React.FC = () => {
                       <p className="text-dark-muted text-sm">{item.variant.name}</p>
                     )}
                     <div className="flex justify-between items-center mt-1">
-                      <span className="text-dark-muted text-sm">Qty: {item.qty}</span>
+                      <span className="text-dark-muted text-sm">Qty: {item.quantity}</span>
                       <span className="text-electric-400 font-semibold">
-                        {formatPrice((item.variant?.price_cents || item.product?.price_cents || 0) * item.qty)}
+                        {formatPrice((item.base_price + (item.price_modifier || 0)) * item.quantity)}
                       </span>
                     </div>
                   </div>
@@ -137,15 +137,15 @@ const Checkout: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-dark-muted">
                   <span>Shipping</span>
-                  <span>{formatPrice(shippingCents)}</span>
+                  <span>{formatPrice(6.00)}</span>
                 </div>
                 <div className="flex justify-between text-dark-muted">
                   <span>Tax</span>
-                  <span>{formatPrice(taxCents)}</span>
+                  <span>{formatPrice(tax)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold text-dark-text border-t border-dark-border pt-2">
                   <span>Total</span>
-                  <span className="text-electric-400">{formatPrice(totalCents)}</span>
+                  <span className="text-electric-400">{formatPrice(total)}</span>
                 </div>
               </div>
             </div>

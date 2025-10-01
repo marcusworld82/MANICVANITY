@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
-import { formatPrice } from '../../data/catalog';
+import { formatPrice } from '../../data/localCatalog';
 
 const CartDrawer: React.FC = () => {
   const { isOpen, closeCart, items, itemCount, subtotal, updateQuantity, removeItem } = useCart();
@@ -92,7 +92,7 @@ const CartDrawer: React.FC = () => {
                           <p className="text-dark-muted text-sm">{item.variant.name}</p>
                         )}
                         <p className="text-electric-400 font-semibold">
-                          {formatPrice(item.variant?.price_cents || item.product?.price_cents || 0)}
+                          {formatPrice((item.base_price + (item.price_modifier || 0)))}
                         </p>
 
                         {/* Quantity Controls */}
@@ -107,13 +107,13 @@ const CartDrawer: React.FC = () => {
                           </motion.button>
                           
                           <span className="text-dark-text font-medium w-8 text-center">
-                            {item.qty}
+                            {item.quantity}
                           </span>
                           
                           <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
-                            onClick={() => updateQuantity(item.id, item.qty + 1)}
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             className="w-8 h-8 bg-dark-border rounded-full flex items-center justify-center text-dark-muted hover:text-electric-400 hover:bg-electric-500/20 transition-colors duration-200"
                           >
                             <Plus size={14} />
