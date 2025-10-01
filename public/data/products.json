@@ -1,0 +1,52 @@
+[
+  {
+    "title": "Arrogance Tee",
+    "slug": "arrogance-tee",
+    "price": "29.99",
+    "image1_url": "https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg",
+    "description": "Bold statement streetwear tee",
+    "category": "Apparel",
+    "sku": "ARG-001",
+    "inventory_qty": "50"
+  },
+  {
+    "title": "Gas Mask Tee",
+    "slug": "gas-mask-tee",
+    "price": "34.99",
+    "image1_url": "https://images.pexels.com/photos/1183266/pexels-photo-1183266.jpeg",
+    "description": "Edgy graphic tee with gas mask design",
+    "category": "Apparel",
+    "sku": "GM-001",
+    "inventory_qty": "25"
+  },
+  {
+    "title": "Lady Diamond Gas Mask Tee",
+    "slug": "lady-diamond-gas-mask-tee",
+    "price": "34.99",
+    "image1_url": "https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg",
+    "description": "Women's version of the iconic gas mask design",
+    "category": "Apparel",
+    "sku": "LDG-001",
+    "inventory_qty": "30"
+  },
+  {
+    "title": "Chill Don't Pay Bills Crewneck",
+    "slug": "chill-crewneck",
+    "price": "49.99",
+    "image1_url": "https://images.pexels.com/photos/1006202/pexels-photo-1006202.jpeg",
+    "description": "Comfortable crewneck with motivational message",
+    "category": "Apparel",
+    "sku": "CDP-001",
+    "inventory_qty": "40"
+  },
+  {
+    "title": "Women's Varsity Jacket",
+    "slug": "womens-varsity-jacket",
+    "price": "89.99",
+    "image1_url": "https://images.pexels.com/photos/1040881/pexels-photo-1040881.jpeg",
+    "description": "Classic varsity jacket for women",
+    "category": "Outerwear",
+    "sku": "WVJ-001",
+    "inventory_qty": "15"
+  }
+]
