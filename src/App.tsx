@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { LocalAuthProvider } from './context/LocalAuthContext';
+import { LocalCartProvider } from './context/LocalCartContext';
 import { initializeDatabase, importProductsFromCSV } from './lib/database';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -17,31 +19,41 @@ import CommandCenter from './pages/CommandCenter';
 import AdminPanel from './pages/AdminPanel';
 import TestProducts from './pages/TestProducts';
 
-function App() {
-  // Initialize database on app start
-  React.useEffect(() => {
-    try {
-      initializeDatabase();
-      // Auto-import products from CSV data
-      const csvData = `product_name,category,description,base_price,material,care_instructions,size,color,stock_quantity,sku
-"Arrogance Tee",Apparel,"Bold statement piece with premium cotton construction",29.99,100% Cotton,Machine wash cold,L,Black,5,ARR-L-BLA
-"Established Crewnecks",Apparel,"Classic comfort crewneck in multiple colorways",34.99,100% Cotton,Machine wash cold,M,Navy Blue,8,EST-M-NAV
-"Lady Diamond Gas Mask Tee",Apparel,"Edgy graphic tee with diamond gas mask design",29.99,100% Cotton,Machine wash cold,S,White,6,LAD-S-WHI
-"They Like Me Tee",Apparel,"Confident statement tee in vibrant colors",29.99,100% Cotton,Machine wash cold,M,Neon Green,7,THE-M-NEO
-"Victorious Down Jackets",Apparel,"Premium down jacket for ultimate style",89.99,Down Fill,Dry clean only,L,Purple,3,VIC-L-PUR`;
-      
-      importProductsFromCSV(csvData).then(result => {
-        console.log('Products imported:', result.imported, 'errors:', result.errors);
-      });
-    } catch (error) {
-      console.error('Database initialization error:', error);
+export default function App() {
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    let canceled = false
+    const run = async () => {
+      try {
+        await initializeDatabase()
+      } catch (error) {
+        console.error('Database initialization error:', error)
+      } finally {
+        if (!canceled) setReady(true)
+      }
     }
-  }, []);
+    run()
+    return () => {
+      canceled = true
+    }
+  }, [])
+
+  // CSV upload handler
+  const onCSVSelected = async (file: File) => {
+    try {
+      const text = await file.text()
+      const result = await importProductsFromCSV(text)
+      console.log('Imported', result.imported, 'errors', result.errors)
+    } catch (e) {
+      console.error('CSV import failed:', e)
+    }
+  }
 
   return (
     <div className="dark">
-        <AuthProvider>
-          <CartProvider>
+        <LocalAuthProvider>
+          <LocalCartProvider>
             <Router>
               <Routes>
                 {/* Main App Routes */}
@@ -87,10 +99,8 @@ function App() {
               {/* Global Components */}
               <CartDrawer />
             </Router>
-          </CartProvider>
-        </AuthProvider>
+          </LocalCartProvider>
+        </LocalAuthProvider>
     </div>
   );
 }
-
-export default App;
