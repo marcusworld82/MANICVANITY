@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, Zap, Star, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowRight, Sparkles, Zap, Star } from 'lucide-react';
 
 const Home: React.FC = () => {
   const featuredProducts = [
@@ -25,44 +24,21 @@ const Home: React.FC = () => {
       price: '$259',
       image: 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=800',
       badge: 'Limited'
-    },
-    {
-      id: 4,
-      name: 'Cyber Goth Dress',
-      price: '$199',
-      image: 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=800',
-      badge: 'Hot'
     }
   ];
 
-  const categories = [
+  const collections = [
     {
       name: 'ELECTRIC NIGHTS',
       description: 'Bold pieces for the fearless',
-      image: 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=600',
-      color: 'from-electric-500 to-electric-700',
-      slug: 'electric-nights'
+      image: 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      color: 'from-electric-500 to-electric-700'
     },
     {
       name: 'NEON DREAMS',
       description: 'Vibrant styles that glow',
-      image: 'https://images.pexels.com/photos/1006202/pexels-photo-1006202.jpeg?auto=compress&cs=tinysrgb&w=600',
-      color: 'from-neon-500 to-neon-700',
-      slug: 'neon-dreams'
-    },
-    {
-      name: 'EMERALD EDGE',
-      description: 'Luxurious green aesthetics',
-      image: 'https://images.pexels.com/photos/1183266/pexels-photo-1183266.jpeg?auto=compress&cs=tinysrgb&w=600',
-      color: 'from-emerald-500 to-emerald-700',
-      slug: 'emerald-edge'
-    },
-    {
-      name: 'DARK MATTER',
-      description: 'Mysterious and elegant',
-      image: 'https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg?auto=compress&cs=tinysrgb&w=600',
-      color: 'from-gray-700 to-gray-900',
-      slug: 'dark-matter'
+      image: 'https://images.pexels.com/photos/1006202/pexels-photo-1006202.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      color: 'from-neon-500 to-neon-700'
     }
   ];
 
@@ -101,15 +77,14 @@ const Home: React.FC = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  to="/shop"
-                  className="px-8 py-4 bg-gradient-to-r from-electric-500 to-neon-500 text-white rounded-full font-semibold flex items-center justify-center space-x-2 hover:from-electric-600 hover:to-neon-600 transition-all duration-200"
-                >
-                  <span>Explore Collection</span>
-                  <ArrowRight size={20} />
-                </Link>
-              </motion.div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-8 py-4 bg-gradient-to-r from-electric-500 to-neon-500 text-white rounded-full font-semibold flex items-center justify-center space-x-2 hover:from-electric-600 hover:to-neon-600 transition-all duration-200"
+              >
+                <span>Explore Collection</span>
+                <ArrowRight size={20} />
+              </motion.button>
               
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -123,7 +98,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Featured Products Carousel */}
+      {/* Featured Products */}
       <section className="py-20 px-4">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -141,95 +116,35 @@ const Home: React.FC = () => {
             </p>
           </motion.div>
 
-          {/* Carousel Container */}
-          <div className="relative">
-            <div className="flex space-x-6 overflow-x-auto pb-4 scrollbar-hide">
-              {featuredProducts.map((product, index) => (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  whileHover={{ y: -10 }}
-                  className="group cursor-pointer flex-shrink-0 w-80"
-                >
-                  <div className="relative overflow-hidden rounded-2xl bg-dark-card border border-dark-border">
-                    <div className="absolute top-4 left-4 z-10">
-                      <span className="bg-gradient-to-r from-electric-500 to-neon-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                        {product.badge}
-                      </span>
-                    </div>
-                    
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-80 object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                    
-                    <div className="p-6">
-                      <h3 className="text-dark-text font-semibold text-lg mb-2 group-hover:text-electric-400 transition-colors duration-200">
-                        {product.name}
-                      </h3>
-                      <p className="text-dark-muted text-xl font-bold">{product.price}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Shop by Category Grid */}
-      <section className="py-20 px-4">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold font-space text-dark-text mb-4">
-              Shop by Category
-            </h2>
-            <p className="text-dark-muted text-lg max-w-2xl mx-auto">
-              Discover your style across our curated collections
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {categories.map((category, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {featuredProducts.map((product, index) => (
               <motion.div
-                key={category.name}
-                initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8 }}
+                key={product.id}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true }}
-                whileHover={{ scale: 1.02 }}
-                className="relative h-96 rounded-3xl overflow-hidden cursor-pointer group"
+                whileHover={{ y: -10 }}
+                className="group cursor-pointer"
               >
-                <img
-                  src={category.image}
-                  alt={category.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
-                <div className={`absolute inset-0 bg-gradient-to-t ${category.color} opacity-60`}></div>
-                <div className="absolute inset-0 flex items-end">
-                  <div className="p-8 w-full">
-                    <h3 className="text-white text-3xl font-bold font-space mb-2">
-                      {category.name}
+                <div className="relative overflow-hidden rounded-2xl bg-dark-card border border-dark-border">
+                  <div className="absolute top-4 left-4 z-10">
+                    <span className="bg-gradient-to-r from-electric-500 to-neon-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                      {product.badge}
+                    </span>
+                  </div>
+                  
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                  
+                  <div className="p-6">
+                    <h3 className="text-dark-text font-semibold text-lg mb-2 group-hover:text-electric-400 transition-colors duration-200">
+                      {product.name}
                     </h3>
-                    <p className="text-white/80 text-lg mb-4">{category.description}</p>
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Link
-                        to={`/shop?category=${category.slug}`}
-                        className="bg-white text-dark-bg px-6 py-2 rounded-full font-semibold hover:bg-dark-text transition-colors duration-200 inline-block"
-                      >
-                        Discover Now
-                      </Link>
-                    </motion.div>
+                    <p className="text-dark-muted text-xl font-bold">{product.price}</p>
                   </div>
                 </div>
               </motion.div>
@@ -238,46 +153,49 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Newsletter Signup Section */}
-      <section className="py-20 px-4 bg-dark-card/30">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl md:text-4xl font-bold font-space text-dark-text mb-4">
-              Join the Rebellion
-            </h2>
-            <p className="text-dark-muted text-lg mb-8 max-w-2xl mx-auto">
-              Be the first to know about new collections, exclusive drops, and underground fashion events.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-6 py-4 bg-dark-bg border border-dark-border rounded-full focus:outline-none focus:border-electric-400 text-dark-text"
-              />
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 bg-gradient-to-r from-electric-500 to-neon-500 text-white rounded-full font-semibold hover:from-electric-600 hover:to-neon-600 transition-all duration-200"
+      {/* Collections */}
+      <section className="py-20 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {collections.map((collection, index) => (
+              <motion.div
+                key={collection.name}
+                initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8 }}
+                viewport={{ once: true }}
+                whileHover={{ scale: 1.02 }}
+                className="relative h-96 rounded-3xl overflow-hidden cursor-pointer group"
               >
-                Subscribe
-              </motion.button>
-            </div>
-            
-            <p className="text-dark-muted text-sm mt-4">
-              No spam, just pure fashion rebellion. Unsubscribe anytime.
-            </p>
-          </motion.div>
+                <img
+                  src={collection.image}
+                  alt={collection.name}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+                <div className={`absolute inset-0 bg-gradient-to-t ${collection.color} opacity-60`}></div>
+                <div className="absolute inset-0 flex items-end">
+                  <div className="p-8 w-full">
+                    <h3 className="text-white text-3xl font-bold font-space mb-2">
+                      {collection.name}
+                    </h3>
+                    <p className="text-white/80 text-lg mb-4">{collection.description}</p>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="bg-white text-dark-bg px-6 py-2 rounded-full font-semibold hover:bg-dark-text transition-colors duration-200"
+                    >
+                      Discover Now
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Features */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4 bg-dark-card/30">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[

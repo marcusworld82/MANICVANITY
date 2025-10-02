@@ -1,22 +1,15 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Minus, ShoppingBag, ArrowRight, Trash2 } from 'lucide-react';
-import { useCart } from '../../context/LocalCartContext';
-import { Link } from 'react-router-dom';
+import { X, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
+import { useCart } from '../../context/CartContext';
+import { formatPrice } from '../../data/catalog';
 
 const CartDrawer: React.FC = () => {
-  const { items, itemCount, subtotal, isOpen, closeCart, updateQuantity, removeItem } = useCart();
+  const { isOpen, closeCart, items, itemCount, subtotal, updateQuantity, removeItem } = useCart();
 
-  const shipping = 6.00;
-  const taxRate = 0.085;
-  const tax = subtotal * taxRate;
-  const total = subtotal + shipping + tax;
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(price);
+  const handleCheckout = async () => {
+    // Navigate to checkout page instead of direct Stripe
+    window.location.href = '/checkout';
   };
 
   return (
@@ -61,16 +54,8 @@ const CartDrawer: React.FC = () => {
               {items.length === 0 ? (
                 <div className="text-center py-12">
                   <ShoppingBag size={48} className="text-dark-muted mx-auto mb-4" />
-                  <h3 className="text-dark-text text-lg font-semibold mb-2">Your cart is empty</h3>
-                  <p className="text-dark-muted text-sm mb-6">Add some items to get started</p>
-                  <Link
-                    to="/shop"
-                    onClick={closeCart}
-                    className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-electric-500 to-neon-500 text-white rounded-lg font-semibold hover:from-electric-600 hover:to-neon-600 transition-all duration-200"
-                  >
-                    <span>Start Shopping</span>
-                    <ArrowRight size={16} />
-                  </Link>
+                  <p className="text-dark-muted text-lg mb-2">Your cart is empty</p>
+                  <p className="text-dark-muted text-sm">Add some items to get started</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -85,10 +70,10 @@ const CartDrawer: React.FC = () => {
                     >
                       {/* Product Image */}
                       <div className="w-16 h-16 bg-dark-border rounded-lg flex-shrink-0 overflow-hidden">
-                        {item.image ? (
+                        {item.product?.images?.[0] ? (
                           <img
-                            src={item.image}
-                            alt={item.title}
+                            src={item.product.images[0].url}
+                            alt={item.product.images[0].alt || item.product.name}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -100,54 +85,48 @@ const CartDrawer: React.FC = () => {
 
                       {/* Product Details */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-dark-text font-medium truncate mb-1">
-                          {item.title}
+                        <h3 className="text-dark-text font-medium truncate">
+                          {item.product?.name}
                         </h3>
-                        
-                        <div className="flex items-center space-x-2 text-sm text-dark-muted mb-2">
-                          {item.size && <span>Size: {item.size}</span>}
-                          {item.size && item.color && <span>•</span>}
-                          {item.color && <span>Color: {item.color}</span>}
-                        </div>
+                        {item.variant && (
+                          <p className="text-dark-muted text-sm">{item.variant.name}</p>
+                        )}
+                        <p className="text-electric-400 font-semibold">
+                          {formatPrice(item.variant?.price_cents || item.product?.price_cents || 0)}
+                        </p>
 
-                        <div className="flex items-center justify-between">
-                          <span className="text-electric-400 font-semibold">
-                            {formatPrice(item.price)}
+                        {/* Quantity Controls */}
+                        <div className="flex items-center space-x-2 mt-2">
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => updateQuantity(item.id, item.qty - 1)}
+                            className="w-8 h-8 bg-dark-border rounded-full flex items-center justify-center text-dark-muted hover:text-electric-400 hover:bg-electric-500/20 transition-colors duration-200"
+                          >
+                            <Minus size={14} />
+                          </motion.button>
+                          
+                          <span className="text-dark-text font-medium w-8 text-center">
+                            {item.qty}
                           </span>
-
-                          {/* Quantity Controls */}
-                          <div className="flex items-center space-x-2">
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              className="w-8 h-8 bg-dark-border rounded-full flex items-center justify-center text-dark-muted hover:text-electric-400 hover:bg-electric-500/20 transition-colors duration-200"
-                            >
-                              <Minus size={14} />
-                            </motion.button>
-                            
-                            <span className="text-dark-text font-medium w-8 text-center">
-                              {item.quantity}
-                            </span>
-                            
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="w-8 h-8 bg-dark-border rounded-full flex items-center justify-center text-dark-muted hover:text-electric-400 hover:bg-electric-500/20 transition-colors duration-200"
-                            >
-                              <Plus size={14} />
-                            </motion.button>
-                            
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => removeItem(item.id)}
-                              className="ml-2 text-red-400 hover:text-red-300 p-1"
-                            >
-                              <Trash2 size={14} />
-                            </motion.button>
-                          </div>
+                          
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => updateQuantity(item.id, item.qty + 1)}
+                            className="w-8 h-8 bg-dark-border rounded-full flex items-center justify-center text-dark-muted hover:text-electric-400 hover:bg-electric-500/20 transition-colors duration-200"
+                          >
+                            <Plus size={14} />
+                          </motion.button>
+                          
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => removeItem(item.id)}
+                            className="ml-2 text-red-400 hover:text-red-300 text-sm"
+                          >
+                            Remove
+                          </motion.button>
                         </div>
                       </div>
                     </motion.div>
@@ -159,43 +138,30 @@ const CartDrawer: React.FC = () => {
             {/* Footer */}
             {items.length > 0 && (
               <div className="border-t border-dark-border p-6 space-y-4">
-                {/* Totals */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-dark-muted">
-                    <span>Subtotal</span>
-                    <span>{formatPrice(subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-dark-muted">
-                    <span>Shipping</span>
-                    <span>{formatPrice(shipping)}</span>
-                  </div>
-                  <div className="flex justify-between text-dark-muted">
-                    <span>Tax (est.)</span>
-                    <span>{formatPrice(tax)}</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-semibold text-dark-text border-t border-dark-border pt-2">
-                    <span>Total</span>
-                    <span className="text-electric-400">{formatPrice(total)}</span>
-                  </div>
+                <div className="flex justify-between items-center text-lg font-semibold">
+                  <span className="text-dark-text">Subtotal:</span>
+                  <span className="text-electric-400">{formatPrice(subtotal)}</span>
                 </div>
 
-                {/* Actions */}
                 <div className="space-y-3">
-                  <Link
-                    to="/checkout"
-                    onClick={closeCart}
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleCheckout}
                     className="w-full py-3 bg-gradient-to-r from-electric-500 to-neon-500 text-white rounded-lg font-semibold hover:from-electric-600 hover:to-neon-600 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <span>Checkout</span>
                     <ArrowRight size={18} />
-                  </Link>
+                  </motion.button>
 
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={closeCart}
                     className="w-full py-3 border border-dark-border bg-dark-bg/50 text-dark-text rounded-lg font-semibold hover:border-electric-400 hover:text-electric-400 transition-all duration-200"
                   >
                     Continue Shopping
-                  </button>
+                  </motion.button>
                 </div>
               </div>
             )}

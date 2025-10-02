@@ -1,44 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ArrowLeft, 
-  ShoppingBag, 
-  Heart, 
-  Share2, 
-  Plus, 
-  Minus, 
-  ChevronDown,
-  ChevronUp,
-  Truck,
-  Shield,
-  RotateCcw,
-  Star
-} from 'lucide-react';
-import { getAllProducts, Product } from '../lib/database';
-import { useCart } from '../context/LocalCartContext';
+import { motion } from 'framer-motion';
+import { ArrowLeft, ShoppingBag, Heart, Share2, Plus, Minus } from 'lucide-react';
+import { getProductBySlug, formatPrice } from '../data/catalog';
+import { useCart } from '../context/CartContext';
+import type { Product, Variant } from '../types/database';
 
 const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addItem } = useCart();
   
   const [product, setProduct] = useState<Product | null>(null);
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [selectedSize, setSelectedSize] = useState<string>('');
-  const [selectedColor, setSelectedColor] = useState<string>('');
-  const [expandedSections, setExpandedSections] = useState({
-    description: true,
-    materials: false,
-    care: false,
-    shipping: false
-  });
-
-  const sizes = ['XS', 'S', 'M', 'L', 'XL', '2X', '3X', '4X', '5X', '6X'];
-  const colors = ['Black', 'White', 'Blue', 'Red', 'Green', 'Yellow'];
 
   useEffect(() => {
     if (slug) {
@@ -49,17 +26,12 @@ const ProductDetail: React.FC = () => {
   const loadProduct = async (productSlug: string) => {
     setLoading(true);
     try {
-      const allProducts = await getAllProducts();
-      const productData = allProducts.find(p => p.slug === productSlug);
+      const productData = await getProductBySlug(productSlug);
+      setProduct(productData);
       
-      if (productData) {
-        setProduct(productData);
-        
-        // Load related products from same category
-        const related = allProducts.filter(p => 
-          p.category === productData.category && p.id !== productData.id
-        ).slice(0, 4);
-        setRelatedProducts(related);
+      // Set first variant as default if available
+      if (productData?.variants && productData.variants.length > 0) {
+        setSelectedVariant(productData.variants[0]);
       }
     } catch (error) {
       console.error('Error loading product:', error);
@@ -71,27 +43,12 @@ const ProductDetail: React.FC = () => {
   const handleAddToCart = async () => {
     if (!product) return;
     
-    await addToCart(product, { size: selectedSize, color: selectedColor, quantity });
+    await addItem(product, selectedVariant || undefined, quantity);
     // TODO: Show success toast
   };
 
-  const handleBuyNow = async () => {
-    if (!product) return;
-    
-    await addToCart(product, { size: selectedSize, color: selectedColor, quantity });
-    navigate('/checkout');
-  };
-
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
-
-  const currentPrice = product?.price || 0;
-  const comparePrice = product?.compare_at_price;
-  const isOnSale = comparePrice && comparePrice > currentPrice;
+  const currentPrice = selectedVariant?.price_cents || product?.price_cents || 0;
+  const comparePrice = product?.compare_at_cents;
 
   if (loading) {
     return (
@@ -131,24 +88,19 @@ const ProductDetail: React.FC = () => {
           <span>Back to Shop</span>
         </motion.button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Product Images */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
-            className="space-y-4"
           >
             {/* Main Image */}
-            <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-dark-card border border-dark-border">
-              {product.image1_url ? (
-                <motion.img
-                  key={selectedImageIndex}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  src={[product.image1_url, product.image2_url, product.image3_url].filter(Boolean)[selectedImageIndex] || product.image1_url}
-                  alt={product.title}
+            <div className="aspect-[4/5] rounded-2xl overflow-hidden mb-4">
+              {product.images && product.images.length > 0 ? (
+                <img
+                  src={product.images[selectedImageIndex]?.url}
+                  alt={product.images[selectedImageIndex]?.alt || product.name}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -159,23 +111,23 @@ const ProductDetail: React.FC = () => {
             </div>
 
             {/* Thumbnail Images */}
-            {[product.image1_url, product.image2_url, product.image3_url].filter(Boolean).length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
-                {[product.image1_url, product.image2_url, product.image3_url].filter(Boolean).slice(0, 4).map((imageUrl, index) => (
+            {product.images && product.images.length > 1 && (
+              <div className="flex space-x-2 overflow-x-auto">
+                {product.images.map((image, index) => (
                   <motion.button
-                    key={index}
+                    key={image.id}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setSelectedImageIndex(index)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors duration-200 ${
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors duration-200 ${
                       selectedImageIndex === index
                         ? 'border-electric-400'
                         : 'border-dark-border hover:border-electric-400/50'
                     }`}
                   >
                     <img
-                      src={imageUrl}
-                      alt={product.title}
+                      src={image.url}
+                      alt={image.alt || product.name}
                       className="w-full h-full object-cover"
                     />
                   </motion.button>
@@ -191,99 +143,60 @@ const ProductDetail: React.FC = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="space-y-6"
           >
-            {/* Category & Reviews */}
-            <div className="flex items-center justify-between">
-              {product.category && (
-                <span className="text-electric-400 font-medium text-sm uppercase tracking-wide">
-                  {product.category}
-                </span>
-              )}
-              <div className="flex items-center space-x-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={16} className="text-yellow-400 fill-current" />
-                ))}
-                <span className="text-dark-muted text-sm ml-2">(127 reviews)</span>
-              </div>
-            </div>
+            {/* Category */}
+            {product.category && (
+              <p className="text-electric-400 font-medium">{product.category.name}</p>
+            )}
 
             {/* Title */}
             <h1 className="text-3xl md:text-4xl font-bold font-space text-dark-text">
-              {product.title}
+              {product.name}
             </h1>
 
             {/* Price */}
             <div className="flex items-center space-x-3">
-              <span className="text-3xl font-bold text-electric-400">
-                ${currentPrice.toFixed(2)}
+              <span className="text-2xl font-bold text-electric-400">
+                {formatPrice(currentPrice)}
               </span>
-              {isOnSale && (
-                <>
-                  <span className="text-xl text-dark-muted line-through">
-                    ${comparePrice.toFixed(2)}
-                  </span>
-                  <span className="bg-gradient-to-r from-electric-500 to-neon-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                    Save {Math.round(((comparePrice - currentPrice) / comparePrice) * 100)}%
-                  </span>
-                </>
+              {comparePrice && comparePrice > currentPrice && (
+                <span className="text-lg text-dark-muted line-through">
+                  {formatPrice(comparePrice)}
+                </span>
               )}
             </div>
 
-            {/* Size Selector */}
-            <div>
-              <h3 className="text-dark-text font-semibold mb-3 flex items-center justify-between">
-                <span>Size: {selectedSize && <span className="text-electric-400">{selectedSize}</span>}</span>
-                <button className="text-electric-400 text-sm hover:text-electric-300 transition-colors duration-200">
-                  Size Guide
-                </button>
-              </h3>
-              <div className="grid grid-cols-6 gap-2">
-                {sizes.map((size) => (
-                  <motion.button
-                    key={size}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedSize(size)}
-                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ${
-                      selectedSize === size
-                        ? 'border-electric-400 bg-electric-500/10 text-electric-400'
-                        : 'border-dark-border text-dark-muted hover:border-electric-400/50 hover:text-electric-400'
-                    }`}
-                  >
-                    {size}
-                  </motion.button>
-                ))}
+            {/* Description */}
+            {product.description && (
+              <div className="prose prose-invert max-w-none">
+                <p className="text-dark-muted leading-relaxed">{product.description}</p>
               </div>
-            </div>
+            )}
 
-            {/* Color Selector */}
-            <div>
-              <h3 className="text-dark-text font-semibold mb-3">
-                Color: {selectedColor && <span className="text-electric-400">{selectedColor}</span>}
-              </h3>
-              <div className="flex space-x-3">
-                {colors.map((color) => (
-                  <motion.button
-                    key={color}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setSelectedColor(color)}
-                    className={`w-10 h-10 rounded-full border-2 transition-all duration-200 ${
-                      selectedColor === color
-                        ? 'border-electric-400 ring-2 ring-electric-400/30'
-                        : 'border-dark-border hover:border-electric-400/50'
-                    }`}
-                    style={{ backgroundColor: color.toLowerCase() }}
-                    title={color}
-                  />
-                ))}
+            {/* Variants */}
+            {product.variants && product.variants.length > 0 && (
+              <div>
+                <h3 className="text-dark-text font-semibold mb-3">
+                  {product.variants[0].name.includes('Size') ? 'Size' : 'Options'}
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {product.variants.map((variant) => (
+                    <motion.button
+                      key={variant.id}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setSelectedVariant(variant)}
+                      className={`px-4 py-2 rounded-lg border transition-colors duration-200 ${
+                        selectedVariant?.id === variant.id
+                          ? 'border-electric-400 bg-electric-400/10 text-electric-400'
+                          : 'border-dark-border text-dark-muted hover:border-electric-400/50 hover:text-electric-400'
+                      }`}
+                    >
+                      {variant.name}
+                    </motion.button>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            {/* Stock Status */}
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-              <span className="text-green-400 text-sm font-medium">In Stock - Ready to Ship</span>
-            </div>
+            )}
 
             {/* Quantity */}
             <div>
@@ -294,18 +207,16 @@ const ProductDetail: React.FC = () => {
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="p-3 text-dark-muted hover:text-electric-400 transition-colors duration-200"
+                    className="p-2 text-dark-muted hover:text-electric-400 transition-colors duration-200"
                   >
                     <Minus size={18} />
                   </motion.button>
-                  <span className="px-4 py-3 text-dark-text font-medium min-w-[60px] text-center">
-                    {quantity}
-                  </span>
+                  <span className="px-4 py-2 text-dark-text font-medium">{quantity}</span>
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setQuantity(quantity + 1)}
-                    className="p-3 text-dark-muted hover:text-electric-400 transition-colors duration-200"
+                    className="p-2 text-dark-muted hover:text-electric-400 transition-colors duration-200"
                   >
                     <Plus size={18} />
                   </motion.button>
@@ -315,26 +226,15 @@ const ProductDetail: React.FC = () => {
 
             {/* Actions */}
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleAddToCart}
-                  className="py-4 bg-gradient-to-r from-electric-500 to-neon-500 text-white rounded-lg font-semibold hover:from-electric-600 hover:to-neon-600 transition-all duration-200 flex items-center justify-center space-x-2"
-                >
-                  <ShoppingBag size={20} />
-                  <span>Add to Cart</span>
-                </motion.button>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleBuyNow}
-                  className="py-4 bg-dark-text text-dark-bg rounded-lg font-semibold hover:bg-dark-muted transition-all duration-200"
-                >
-                  Buy Now
-                </motion.button>
-              </div>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleAddToCart}
+                className="w-full py-4 bg-gradient-to-r from-electric-500 to-neon-500 text-white rounded-lg font-semibold hover:from-electric-600 hover:to-neon-600 transition-all duration-200 flex items-center justify-center space-x-2"
+              >
+                <ShoppingBag size={20} />
+                <span>Add to Cart</span>
+              </motion.button>
 
               <div className="flex space-x-4">
                 <motion.button
@@ -343,7 +243,7 @@ const ProductDetail: React.FC = () => {
                   className="flex-1 py-3 border border-dark-border bg-dark-card text-dark-text rounded-lg font-semibold hover:border-electric-400 hover:text-electric-400 transition-all duration-200 flex items-center justify-center space-x-2"
                 >
                   <Heart size={18} />
-                  <span>Add to Wishlist</span>
+                  <span>Wishlist</span>
                 </motion.button>
 
                 <motion.button
@@ -356,241 +256,8 @@ const ProductDetail: React.FC = () => {
                 </motion.button>
               </div>
             </div>
-
-            {/* Features */}
-            <div className="grid grid-cols-3 gap-4 pt-6 border-t border-dark-border">
-              <div className="text-center">
-                <Truck className="text-electric-400 mx-auto mb-2" size={24} />
-                <p className="text-dark-text text-sm font-medium">Free Shipping</p>
-                <p className="text-dark-muted text-xs">On orders over $150</p>
-              </div>
-              <div className="text-center">
-                <RotateCcw className="text-electric-400 mx-auto mb-2" size={24} />
-                <p className="text-dark-text text-sm font-medium">Easy Returns</p>
-                <p className="text-dark-muted text-xs">30-day return policy</p>
-              </div>
-              <div className="text-center">
-                <Shield className="text-electric-400 mx-auto mb-2" size={24} />
-                <p className="text-dark-text text-sm font-medium">Secure Payment</p>
-                <p className="text-dark-muted text-xs">SSL encrypted checkout</p>
-              </div>
-            </div>
           </motion.div>
         </div>
-
-        {/* Product Details Accordion */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="bg-dark-card border border-dark-border rounded-2xl p-6 mb-16"
-        >
-          <h2 className="text-2xl font-bold text-dark-text mb-6">Product Details</h2>
-          
-          <div className="space-y-4">
-            {/* Description */}
-            <div className="border-b border-dark-border pb-4">
-              <button
-                onClick={() => toggleSection('description')}
-                className="flex items-center justify-between w-full text-left"
-              >
-                <h3 className="text-dark-text font-semibold text-lg">Description</h3>
-                {expandedSections.description ? (
-                  <ChevronUp className="text-dark-muted" size={20} />
-                ) : (
-                  <ChevronDown className="text-dark-muted" size={20} />
-                )}
-              </button>
-              <AnimatePresence>
-                {expandedSections.description && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="pt-4">
-                      <p className="text-dark-muted leading-relaxed">
-                        {product.description || 'This stunning piece embodies the MANIC VANITY aesthetic with its bold design and premium materials. Crafted for those who dare to be different, it combines rebellious style with uncompromising quality.'}
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Materials */}
-            <div className="border-b border-dark-border pb-4">
-              <button
-                onClick={() => toggleSection('materials')}
-                className="flex items-center justify-between w-full text-left"
-              >
-                <h3 className="text-dark-text font-semibold text-lg">Materials & Construction</h3>
-                {expandedSections.materials ? (
-                  <ChevronUp className="text-dark-muted" size={20} />
-                ) : (
-                  <ChevronDown className="text-dark-muted" size={20} />
-                )}
-              </button>
-              <AnimatePresence>
-                {expandedSections.materials && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="pt-4">
-                      <ul className="text-dark-muted space-y-2">
-                        <li>• 100% Premium Cotton with reinforced stitching</li>
-                        <li>• Heavyweight 280gsm fabric for durability</li>
-                        <li>• Pre-shrunk to maintain fit after washing</li>
-                        <li>• Double-needle hemmed sleeves and bottom</li>
-                        <li>• Tagless label for comfort</li>
-                      </ul>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Care Instructions */}
-            <div className="border-b border-dark-border pb-4">
-              <button
-                onClick={() => toggleSection('care')}
-                className="flex items-center justify-between w-full text-left"
-              >
-                <h3 className="text-dark-text font-semibold text-lg">Care Instructions</h3>
-                {expandedSections.care ? (
-                  <ChevronUp className="text-dark-muted" size={20} />
-                ) : (
-                  <ChevronDown className="text-dark-muted" size={20} />
-                )}
-              </button>
-              <AnimatePresence>
-                {expandedSections.care && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="pt-4">
-                      <ul className="text-dark-muted space-y-2">
-                        <li>• Machine wash cold with like colors</li>
-                        <li>• Use mild detergent, avoid bleach</li>
-                        <li>• Tumble dry low or hang dry</li>
-                        <li>• Iron inside out on low heat if needed</li>
-                        <li>• Do not dry clean</li>
-                      </ul>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Shipping */}
-            <div>
-              <button
-                onClick={() => toggleSection('shipping')}
-                className="flex items-center justify-between w-full text-left"
-              >
-                <h3 className="text-dark-text font-semibold text-lg">Shipping & Returns</h3>
-                {expandedSections.shipping ? (
-                  <ChevronUp className="text-dark-muted" size={20} />
-                ) : (
-                  <ChevronDown className="text-dark-muted" size={20} />
-                )}
-              </button>
-              <AnimatePresence>
-                {expandedSections.shipping && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="pt-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <h4 className="text-dark-text font-medium mb-2">Shipping</h4>
-                          <ul className="text-dark-muted text-sm space-y-1">
-                            <li>• Free shipping on orders over $150</li>
-                            <li>• Standard shipping: 5-7 business days</li>
-                            <li>• Express shipping: 2-3 business days</li>
-                            <li>• International shipping available</li>
-                          </ul>
-                        </div>
-                        <div>
-                          <h4 className="text-dark-text font-medium mb-2">Returns</h4>
-                          <ul className="text-dark-muted text-sm space-y-1">
-                            <li>• 30-day return policy</li>
-                            <li>• Items must be unworn and tagged</li>
-                            <li>• Free return shipping</li>
-                            <li>• Refunds processed within 5-7 days</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Related Products */}
-        {relatedProducts.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-          >
-            <h2 className="text-2xl font-bold text-dark-text mb-8">You Might Also Like</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.map((relatedProduct, index) => (
-                <motion.div
-                  key={relatedProduct.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  whileHover={{ y: -5 }}
-                  className="group"
-                >
-                  <Link to={`/product/${relatedProduct.slug}`} className="block">
-                    <div className="bg-dark-card border border-dark-border rounded-2xl overflow-hidden hover:border-electric-400/50 transition-all duration-300">
-                      <div className="aspect-[3/4] relative overflow-hidden">
-                        {relatedProduct.image1_url ? (
-                          <img
-                            src={relatedProduct.image1_url}
-                            alt={relatedProduct.title}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-electric-500/20 to-neon-500/20 flex items-center justify-center">
-                            <ShoppingBag size={32} className="text-dark-muted" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="text-dark-text font-semibold mb-2 group-hover:text-electric-400 transition-colors duration-200 line-clamp-2">
-                          {relatedProduct.title}
-                        </h3>
-                        <p className="text-electric-400 font-bold">
-                          ${relatedProduct.price.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
       </div>
     </div>
   );

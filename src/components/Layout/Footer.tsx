@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Instagram, Twitter, Facebook, Youtube, Linkedin } from 'lucide-react';
+import { Mail, Instagram, Twitter, Facebook } from 'lucide-react';
 
 const Footer: React.FC = () => {
   const helpLinks = [
@@ -37,7 +37,7 @@ const Footer: React.FC = () => {
             >
               MANIC VANITY
             </motion.h2>
-            <p className="text-dark-muted mb-6 max-w-md leading-relaxed">
+            <p className="text-dark-muted mb-6 max-w-md">
               Discover the extraordinary. Embrace the unconventional. Express your unique style with our curated collection of avant-garde fashion.
             </p>
             
@@ -62,7 +62,7 @@ const Footer: React.FC = () => {
 
             {/* Social Links */}
             <div className="flex space-x-4">
-              {[Instagram, Twitter, Facebook, Youtube, Linkedin, Mail].map((Icon, index) => (
+              {[Instagram, Twitter, Facebook, Mail].map((Icon, index) => (
                 <motion.a
                   key={index}
                   href="#"

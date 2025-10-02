@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
-import { useLocalAuth } from '../LocalAuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 const SignUpForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -14,7 +14,7 @@ const SignUpForm: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   
-  const { login } = useLocalAuth();
+  const { signUp } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,10 +34,10 @@ const SignUpForm: React.FC = () => {
       return;
     }
 
-    const success = await login(email, password);
+    const { error } = await signUp(email, password);
     
-    if (!success) {
-      setError('Failed to create account');
+    if (error) {
+      setError(error.message);
     } else {
       setSuccess(true);
       setTimeout(() => navigate('/'), 2000);

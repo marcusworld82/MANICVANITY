@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Elements } from '@stripe/react-stripe-js';
 import { stripePromise } from './lib/stripe';
-import { AuthProvider } from './context/LocalAuthContext';
-import { CartProvider } from './context/LocalCartContext';
-import { initializeDatabase, importProductsFromCSV } from './lib/database';
+import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import CartDrawer from './components/Cart/CartDrawer';
@@ -16,46 +15,12 @@ import SignUpForm from './components/Auth/SignUpForm';
 import Checkout from './pages/Checkout';
 import CheckoutSuccess from './pages/CheckoutSuccess';
 import CheckoutCancel from './pages/CheckoutCancel';
-import OrderConfirmation from './pages/OrderConfirmation';
 import Account from './pages/Account';
 import CommandCenter from './pages/CommandCenter';
 import AdminPanel from './pages/AdminPanel';
 import TestProducts from './pages/TestProducts';
 
 function App() {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    let canceled = false;
-    const run = async () => {
-      try {
-        await initializeDatabase();
-      } catch (error) {
-        console.error('Database initialization error:', error);
-      } finally {
-        if (!canceled) setReady(true);
-      }
-    };
-    run();
-    return () => {
-      canceled = true;
-    };
-  }, []);
-
-  const onCSVSelected = async (file: File) => {
-    const text = await file.text();
-    const res = await importProductsFromCSV(text);
-    console.log('Imported', res.imported, 'errors', res.errors);
-  };
-
-  if (!ready) {
-    return (
-      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-electric-400"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="dark">
       <Elements stripe={stripePromise}>
@@ -71,7 +36,7 @@ function App() {
                 <Route path="/" element={<Layout />}>
                   <Route index element={<Home />} />
                   <Route path="shop" element={<Shop />} />
-                  <Route path="product/:slug" element={<ProductDetail />} />
+                  <Route path="p/:slug" element={<ProductDetail />} />
                   <Route path="collections" element={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><p className="text-dark-text text-2xl">Collections Page Coming Soon</p></div>} />
                   <Route path="command-center" element={<CommandCenter />} />
                   <Route path="about" element={<div className="min-h-screen bg-dark-bg flex items-center justify-center"><p className="text-dark-text text-2xl">About Page Coming Soon</p></div>} />
@@ -86,7 +51,6 @@ function App() {
                   
                   <Route path="checkout/success" element={<CheckoutSuccess />} />
                   <Route path="checkout/cancel" element={<CheckoutCancel />} />
-                  <Route path="order/:id" element={<OrderConfirmation />} />
                   
                   <Route path="account/*" element={
                     <ProtectedRoute>
